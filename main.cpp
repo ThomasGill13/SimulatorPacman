@@ -51,6 +51,7 @@ public:
 	Position position;
 	bool Updating;
 	bool Visible;
+    bool Destroy;
 
 
 	BaseGameClass(int x, int y);
@@ -68,6 +69,7 @@ BaseGameClass::BaseGameClass(int x, int y)
 {
     Updating = true;
     Visible = true;
+    Destroy = false;
 	//position = { x, y };
 	position.x = x;
 	position.y = y;
@@ -96,6 +98,8 @@ protected:
 	void UpdatePosition(char direction);
 public:
 	BaseGameSprite(int x, int y);
+
+    bool HasCollided(BaseGameSprite *sprite);
 };
 
 /* BASE GAME SPRITE CPP */
@@ -133,6 +137,11 @@ void BaseGameSprite::UpdatePosition(char direction)
 BaseGameSprite::BaseGameSprite(int x, int y) : BaseGameClass(x, y)
 {
 
+}
+
+bool BaseGameSprite::HasCollided(BaseGameSprite *sprite)
+{
+    return position.x >= sprite->position.x && position.x <= sprite->position.x + TILE_SIZE && position.y >= sprite->position.y && position.y <= sprite->position.y + TILE_SIZE;
 }
 
 /* GAME ENGINE H */
@@ -861,6 +870,13 @@ void Enemy::Update()
 	UpdatePosition(_nextDir);
 
 	_lastDir = _nextDir;
+
+    // Check for collision with the player
+    if (HasCollided(_player))
+    {
+        printf("Collided with Player!\n");
+    }
+
 	//_nextDir = 0x0;
 }
 
