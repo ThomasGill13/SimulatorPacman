@@ -118,6 +118,16 @@ void BaseGameSprite::UpdatePosition(char direction)
 	{
 		position.x--;
 	}
+
+    // Teleport logic here
+    if (position.x == 0)
+    {
+        position.x = (WIDTH - 1) * TILE_SIZE;
+    }
+    else if (position.x == (WIDTH - 1) * TILE_SIZE)
+    {
+        position.x = 0;
+    }
 }
 
 BaseGameSprite::BaseGameSprite(int x, int y) : BaseGameClass(x, y)
@@ -877,7 +887,7 @@ void LCDInit()
 //////////////////////////////////////////////////////////////
 int main()
 {
-    printf("Starting game...");
+    printf("Starting game...\n");
 
 	GameEngine engine;
 	
@@ -898,9 +908,9 @@ int main()
 	engine.AddGameObject(&enemy3);
 	engine.AddGameObject(&enemy4);
 
-    printf("Initialising LCD...");
+    printf("Initialising LCD...\n");
     LCDInit();
 
-    printf("Entering main game loop...");
+    printf("Entering main game loop...\n");
 	engine.MainGameLoop();
 }
