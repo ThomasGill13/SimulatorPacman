@@ -259,6 +259,7 @@ private:
     bool _initialDraw;
 
     int _maze[HEIGHT]; // Used like a 2D array to store the maze. Each bit of the int stores whether the tile is a floor or a wall
+    int _pellets[HEIGHT]; // Used like a 2D array to store if there is a pellet on a given square
 
     void SetFloor(int x, int y);
 
@@ -267,6 +268,10 @@ private:
     void SetTestMaze();
 
     void SetClassicMaze();
+
+    void SetPelletsClassicMaze();
+
+    void DrawTile(int x, int y);
 public:
     std::stack<Position> redrawStack;
 
@@ -284,9 +289,15 @@ public:
 
     bool IsFloorAdjecentScreenPos(Position screenPos, char direction);
 
-	Position ScreenPosToTilePos(int x, int y);
+    bool IsPellet(int x, int y);
 
-	Position ScreenPosToTilePos(Position screenPos);
+    bool TryRemovePellet(int x, int y);
+
+    bool TryRemovePelletScreenPos(Position screenPos);
+
+    Position ScreenPosToTilePos(int x, int y);
+
+    Position ScreenPosToTilePos(Position screenPos);
 
     void Update();
 
@@ -327,38 +338,70 @@ void Maze::SetTestMaze()
 
 void Maze::SetClassicMaze()
 {
-	_maze[0] = 0x0;
-	_maze[1] = 0x7FF9FFE;
-	_maze[2] = 0x4209042;
-	_maze[3] = 0x4209042;
-	_maze[4] = 0x4209042;
-	_maze[5] = 0x7FFFFFE;
-	_maze[6] = 0x4240242;
-	_maze[7] = 0x4240242;
-	_maze[8] = 0x7E79E7E;
-	_maze[9] = 0x0209040;
-	_maze[10] = 0x0209040;
-	_maze[11] = 0x027FE40;
-	_maze[12] = 0x0240240;
-	_maze[13] = 0x0240240;
-	_maze[14] = 0xFFC03FF;
-	_maze[15] = 0x0240240;
-	_maze[16] = 0x0240240;
-	_maze[17] = 0x027FE40;
-	_maze[18] = 0x0240240;
-	_maze[19] = 0x0240240;
-	_maze[20] = 0x7FF9FFE;
-	_maze[21] = 0x4209042;
-	_maze[22] = 0x4209042;
-	_maze[23] = 0x73FFFCE;
-	_maze[24] = 0x1240248;
-	_maze[25] = 0x1240248;
-	_maze[26] = 0x7E79E7E;
-	_maze[27] = 0x4009002;
-	_maze[28] = 0x4009002;
-	_maze[29] = 0x7FFFFFE;
-	//_maze[30] = 0x0;
+    _maze[0] = 0x0;
+    _maze[1] = 0x0;
+    _maze[2] = 0x7FF9FFE;
+    _maze[3] = 0x4209042;
+    _maze[4] = 0x4209042;
+    _maze[5] = 0x4209042;
+    _maze[6] = 0x7FFFFFE;
+    _maze[7] = 0x4240242;
+    _maze[8] = 0x4240242;
+    _maze[9] = 0x7E79E7E;
+    _maze[10] = 0x0209040;
+    _maze[11] = 0x0209040;
+    _maze[12] = 0x027FE40;
+    _maze[13] = 0x0240240;
+    _maze[14] = 0xFFC03FF;
+    _maze[15] = 0x0240240;
+    _maze[16] = 0x027FE40;
+    _maze[17] = 0x0240240;
+    _maze[18] = 0x0240240;
+    _maze[19] = 0x7FF9FFE;
+    _maze[20] = 0x4209042;
+    _maze[21] = 0x4209042;
+    _maze[22] = 0x73FFFCE;
+    _maze[23] = 0x1240248;
+    _maze[24] = 0x1240248;
+    _maze[25] = 0x7E79E7E;
+    _maze[26] = 0x4009002;
+    _maze[27] = 0x4009002;
+    _maze[28] = 0x7FFFFFE;
+    _maze[29] = 0x0;
+}
 
+void Maze::SetPelletsClassicMaze()
+{
+    _pellets[0] = 0x0;
+    _pellets[1] = 0x0;
+    _pellets[2] = 0x7FF9FFE;
+    _pellets[3] = 0x4209042;
+    _pellets[4] = 0x4209042;
+    _pellets[5] = 0x4209042;
+    _pellets[6] = 0x7FFFFFE;
+    _pellets[7] = 0x4240242;
+    _pellets[8] = 0x4240242;
+    _pellets[9] = 0x7E79E7E;
+    _pellets[10] = 0x0200040;
+    _pellets[11] = 0x0200040;
+    _pellets[12] = 0x0200040;
+    _pellets[13] = 0x0200040;
+    _pellets[14] = 0x0200040;
+    _pellets[15] = 0x0200040;
+    _pellets[16] = 0x0200040;
+    _pellets[17] = 0x0200040;
+    _pellets[18] = 0x0200040;
+    _pellets[19] = 0x7FF9FFE;
+    _pellets[20] = 0x4209042;
+    _pellets[21] = 0x4209042;
+    _pellets[22] = 0x73FDFCE;
+    _pellets[23] = 0x1240248;
+    _pellets[24] = 0x1240248;
+    _pellets[25] = 0x7E79E7E;
+    _pellets[26] = 0x4009002;
+    _pellets[27] = 0x4009002;
+    _pellets[28] = 0x7FFFFFE;
+    _pellets[29] = 0x0;
 }
 
 Maze::Maze(int x, int y) : BaseGameClass(x, y)
@@ -366,6 +409,7 @@ Maze::Maze(int x, int y) : BaseGameClass(x, y)
     _initialDraw = true;
 	//SetTestMaze();
 	SetClassicMaze();
+    SetPelletsClassicMaze();
 }
 
 bool Maze::IsInBounds(int x, int y)
@@ -457,6 +501,28 @@ bool Maze::IsFloorAdjecentScreenPos(Position screenPos, char direction)
     return IsFloor(tilePosA.x, tilePosA.y) && IsFloor(tilePosB.x, tilePosB.y);
 }
 
+bool Maze::IsPellet(int x, int y)
+{
+	//return _maze[x][y];
+	return IsInBounds(x, y) && ((_pellets[y] >> x) & 0x1);
+}
+
+bool Maze::TryRemovePellet(int x, int y) {
+    bool hasPellet = IsPellet(x, y);
+
+    if (hasPellet)
+    {
+        _pellets[y] &= ~(0x1 << x); // Clear the x'th bit
+    }
+    
+    return hasPellet;
+}
+
+bool Maze::TryRemovePelletScreenPos(Position screenPos) {
+  Position tilePos = ScreenPosToTilePos(screenPos);
+  return TryRemovePellet(tilePos.x, tilePos.y);
+}
+
 Position Maze::ScreenPosToTilePos(int x, int y)
 {
 	int tileX = x / TILE_SIZE;
@@ -494,6 +560,28 @@ void Maze::Update()
     }
 }
 
+void Maze::DrawTile(int x, int y)
+{
+    if (IsFloor(x, y)) 
+    {
+        // BSP_LCD_DrawPixel(i, j, LCD_COLOR_BLACK);
+        BSP_LCD_SetTextColor(LCD_COLOR_BLACK);
+        BSP_LCD_FillRect(x * TILE_SIZE, y * TILE_SIZE, TILE_SIZE, TILE_SIZE);
+
+        if (IsPellet(x, y))
+        {
+            BSP_LCD_SetTextColor(LCD_COLOR_YELLOW);
+            BSP_LCD_FillCircle((x * TILE_SIZE) + (TILE_SIZE / 2), (y * TILE_SIZE) + (TILE_SIZE / 2), 1);
+        }
+    } 
+    else 
+    {
+        // BSP_LCD_DrawPixel(i, j, LCD_COLOR_BLUE);
+        BSP_LCD_SetTextColor(LCD_COLOR_BLUE);
+        BSP_LCD_FillRect(x * TILE_SIZE, y * TILE_SIZE, TILE_SIZE, TILE_SIZE);
+    }
+}
+
 void Maze::Draw()
 {
     if (_initialDraw)
@@ -503,18 +591,7 @@ void Maze::Draw()
         // Print the maze to the console
         for (int j = 0; j < HEIGHT; j++) {
             for (int i = 0; i < WIDTH; i++) {
-                if (IsFloor(i, j)) 
-                {
-                    // BSP_LCD_DrawPixel(i, j, LCD_COLOR_BLACK);
-                    BSP_LCD_SetTextColor(LCD_COLOR_BLACK);
-                    BSP_LCD_FillRect(i * TILE_SIZE, j * TILE_SIZE, TILE_SIZE, TILE_SIZE);
-                } 
-                else 
-                {
-                    // BSP_LCD_DrawPixel(i, j, LCD_COLOR_BLUE);
-                    BSP_LCD_SetTextColor(LCD_COLOR_BLUE);
-                    BSP_LCD_FillRect(i * TILE_SIZE, j * TILE_SIZE, TILE_SIZE, TILE_SIZE);
-                }
+                DrawTile(i, j);
             }
         }
     }
@@ -523,8 +600,16 @@ void Maze::Draw()
         while(!redrawStack.empty())
         {
             Position redrawPos = redrawStack.top();
-            BSP_LCD_SetTextColor(LCD_COLOR_BLACK);
-            BSP_LCD_FillRect(redrawPos.x, redrawPos.y, TILE_SIZE, TILE_SIZE);
+
+            Position tilePos = ScreenPosToTilePos(redrawPos);
+
+            // Redraw the surrounding tiles
+            DrawTile(tilePos.x, tilePos.y);
+            DrawTile(tilePos.x, tilePos.y + 1);
+            DrawTile(tilePos.x + 1, tilePos.y);
+
+            // BSP_LCD_SetTextColor(LCD_COLOR_BLACK);
+            // BSP_LCD_FillRect(redrawPos.x, redrawPos.y, TILE_SIZE, TILE_SIZE);
             redrawStack.pop();
         }
     }
@@ -536,7 +621,8 @@ class Player : public BaseGameSprite
 {
 private:
 	Maze* _maze;
-	//int _lives = 3;
+	int _lives;
+    int _score;
 
 	char _nextDir;
 
@@ -604,6 +690,8 @@ Player::Player(Maze* maze, int x, int y) : BaseGameSprite(x * TILE_SIZE, y * TIL
 	_maze = maze;
 	_nextDir = 0x0;
 	lastDir = EAST;
+    _score = 0;
+    _lives = 3;
 }
 
 void Player::Init()
@@ -632,26 +720,30 @@ void Player::Update()
         if (_maze->IsFloorAdjecentScreenPos(position, _nextDir))
         {
             UpdatePosition(_nextDir);
-
+            _score += _maze->TryRemovePelletScreenPos(position);
             lastDir = _nextDir;
             _nextDir = 0x0;
         }
         else if (_maze->IsFloorAdjecentScreenPos(position, lastDir))
         {
             UpdatePosition(lastDir);
+            _score += _maze->TryRemovePelletScreenPos(position);
         }
         break;
     case DEAD:
         NextGameState = STARTUP;
+        _lives--;
+        printf("Score = %d\nLives = %d\n", _score, _lives);
+
+        if (_lives == 0)
+        {
+            NextGameState = GAME_OVER;
+        }
         break;
     default:
         Visible = false;
         break;
     }
-
-    
-
-
 }
 
 void Player::Draw()
@@ -659,6 +751,14 @@ void Player::Draw()
     //BSP_LCD_DrawPixel(position.x, position.y, LCD_COLOR_YELLOW);
     BSP_LCD_SetTextColor(LCD_COLOR_YELLOW);
     BSP_LCD_FillRect(position.x, position.y, TILE_SIZE, TILE_SIZE);
+
+    // Draw game state info at the top of the screen
+    BSP_LCD_SetTextColor(LCD_COLOR_WHITE);
+    BSP_LCD_SetBackColor(LCD_COLOR_BLUE);  
+
+    char buffer[20];
+    sprintf(buffer, "LEVEL %d  SCORE %d  LIVES %d", 1, _score, _lives);
+    BSP_LCD_DisplayStringAtLine(0, (uint8_t *) buffer);
 }
 
 /* ENEMY H */
@@ -817,8 +917,6 @@ void Enemy::SetTargetClyde()
 	}
 
 }
-
-
 
 void Enemy::SetTarget()
 {
@@ -979,8 +1077,16 @@ void LCDInit()
         printf("BSP_TS_Init error\n");
     }
 
+    BSP_LCD_SetFont(&Font8);
     BSP_LCD_Clear(LCD_COLOR_WHITE);
 }
+
+/* SPLASH SCREEN H */
+//////////////////////////////////////////////////////////////
+
+
+/* SPLASH SCREEN CPP */
+//////////////////////////////////////////////////////////////
 
 /* MAZE WORLD H */
 //////////////////////////////////////////////////////////////
@@ -1024,12 +1130,12 @@ int main()
 	
 	Maze maze(0, 0);
 
-	Player player(&maze, 13, 23);
+	Player player(&maze, 13, 22);
 
-	Enemy enemy1(&maze, &player, LCD_COLOR_RED, BLINKY_AI, 14, 11);
-	Enemy enemy2(&maze, &player, LCD_COLOR_MAGENTA, PINKY_AI, 12, 11);
-	Enemy enemy3(&maze, &player, &enemy1, LCD_COLOR_CYAN, INKY_AI, 10, 11);
-	Enemy enemy4(&maze, &player, LCD_COLOR_ORANGE, CLYDE_AI, 16, 11);
+	Enemy enemy1(&maze, &player, LCD_COLOR_RED, BLINKY_AI, 14, 12);
+	Enemy enemy2(&maze, &player, LCD_COLOR_MAGENTA, PINKY_AI, 12, 12);
+	Enemy enemy3(&maze, &player, &enemy1, LCD_COLOR_CYAN, INKY_AI, 10, 12);
+	Enemy enemy4(&maze, &player, LCD_COLOR_ORANGE, CLYDE_AI, 16, 12);
 
 	engine.AddGameObject(&maze);
 	engine.AddGameObject(&player);
