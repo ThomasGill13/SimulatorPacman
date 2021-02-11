@@ -11,6 +11,7 @@
 
 /* DEFINES */
 //////////////////////////////////////////////////////////////
+// Direction States
 #define NORTH 0x1
 #define EAST 0x2
 #define SOUTH 0x4
@@ -19,20 +20,32 @@
 #define MAX_GAME_OBJECTS 16
 
 #define WIDTH 28 // Due to the tile state in the 'x' axis being stored in a 32 bit int, this cannot be greater than 32
-#define HEIGHT 30 // Should be 31
+#define HEIGHT 30 // Should be 31 in  a classic game of Pacman
 
+// Maze tile states
 #define FLOOR true
 #define WALL false
 
 #define TILE_SIZE 8
 
+// AI States
 #define BLINKY_AI 1
 #define PINKY_AI 2
 #define INKY_AI 3
 #define CLYDE_AI 4
 
+// Main Game World States
+#define SPLASH_SCREEN 0
+#define MAIN_MENU 1
+#define STARTUP 2
+#define PLAY 3
+#define DEAD 4
+#define GAME_OVER 5
+
 /* GLOBALS */
 //////////////////////////////////////////////////////////////
+char CurGameState = STARTUP;
+char NextGameState = PLAY;
 TS_StateTypeDef TS_State = { 0 };
 
 /* STRUCTS */
@@ -95,6 +108,10 @@ class BaseGameSprite :
 	public BaseGameClass
 {
 protected:
+    Position _startPosition;
+
+    void MoveToStartPosition();
+
 	void UpdatePosition(char direction);
 public:
 	BaseGameSprite(int x, int y);
@@ -104,6 +121,11 @@ public:
 
 /* BASE GAME SPRITE CPP */
 //////////////////////////////////////////////////////////////
+void BaseGameSprite::MoveToStartPosition()
+{
+    position = _startPosition;
+}
+
 void BaseGameSprite::UpdatePosition(char direction)
 {
 	if (direction == NORTH)
@@ -136,7 +158,8 @@ void BaseGameSprite::UpdatePosition(char direction)
 
 BaseGameSprite::BaseGameSprite(int x, int y) : BaseGameClass(x, y)
 {
-
+    _startPosition.x = x;
+    _startPosition.y = y;
 }
 
 bool BaseGameSprite::HasCollided(BaseGameSprite *sprite)
@@ -220,6 +243,8 @@ void GameEngine::MainGameLoop()
 		Update();
 		Draw();
 
+        CurGameState = NextGameState;
+
         wait_ms(10);
 	}
 }
@@ -260,7 +285,10 @@ public:
     bool IsFloorAdjecentScreenPos(Position screenPos, char direction);
 
 	Position ScreenPosToTilePos(int x, int y);
+
 	Position ScreenPosToTilePos(Position screenPos);
+
+    void Update();
 
 	void Draw();
 };
@@ -447,6 +475,25 @@ Position Maze::ScreenPosToTilePos(Position screenPos)
 	return ScreenPosToTilePos(screenPos.x, screenPos.y);
 }
 
+void Maze::Update()
+{
+    switch (CurGameState) {
+    case STARTUP:
+        _initialDraw = true;
+        Visible = true;
+        break;
+    case PLAY:
+        Visible = true;
+        break;
+    case DEAD:
+        Visible = true;
+        break;
+    default:
+        Visible = false;
+        break;
+    }
+}
+
 void Maze::Draw()
 {
     if (_initialDraw)
@@ -551,6 +598,7 @@ void Player::SetDirection()
 
 }
 
+
 Player::Player(Maze* maze, int x, int y) : BaseGameSprite(x * TILE_SIZE, y * TILE_SIZE)
 {
 	_maze = maze;
@@ -565,21 +613,38 @@ void Player::Init()
 
 void Player::Update()
 {
-    _maze->redrawStack.push(position);
+    switch (CurGameState) {
+    case STARTUP:
+        Visible = true;
+        MoveToStartPosition();
+        NextGameState = PLAY;
+        break;
+    case PLAY:
+        _maze->redrawStack.push(position);
 
-	SetDirection();
+        SetDirection();
 
-	if (_maze->IsFloorAdjecentScreenPos(position, _nextDir))
-	{
-		UpdatePosition(_nextDir);
+        if (_maze->IsFloorAdjecentScreenPos(position, _nextDir))
+        {
+            UpdatePosition(_nextDir);
 
-		lastDir = _nextDir;
-		_nextDir = 0x0;
-	}
-	else if (_maze->IsFloorAdjecentScreenPos(position, lastDir))
-	{
-		UpdatePosition(lastDir);
-	}
+            lastDir = _nextDir;
+            _nextDir = 0x0;
+        }
+        else if (_maze->IsFloorAdjecentScreenPos(position, lastDir))
+        {
+            UpdatePosition(lastDir);
+        }
+        break;
+    case DEAD:
+        NextGameState = STARTUP;
+        break;
+    default:
+        Visible = false;
+        break;
+    }
+
+    
 
 
 }
@@ -863,20 +928,33 @@ void Enemy::Init()
 
 void Enemy::Update()
 {
-    _maze->redrawStack.push(position);
+    switch (CurGameState) {
+    case STARTUP:
+        Visible = true;
+        MoveToStartPosition();
+        break;
+    case PLAY:
+        _maze->redrawStack.push(position);
 
-	SetTarget();
-	GetNextDir();
-	UpdatePosition(_nextDir);
+        SetTarget();
+        GetNextDir();
+        UpdatePosition(_nextDir);
 
-	_lastDir = _nextDir;
+        _lastDir = _nextDir;
 
-    // Check for collision with the player
-    if (HasCollided(_player))
-    {
-        printf("Collided with Player!\n");
+        // Check for collision with the player
+        if (HasCollided(_player))
+        {
+            printf("Collided with Player!\n");
+            NextGameState = DEAD;
+        }
+        break;
+    case DEAD:
+        break;
+    default:
+        Visible = false;
+        break;
     }
-
 	//_nextDir = 0x0;
 }
 
@@ -898,6 +976,38 @@ void LCDInit()
 
     BSP_LCD_Clear(LCD_COLOR_WHITE);
 }
+
+/* MAZE WORLD H */
+//////////////////////////////////////////////////////////////
+// class MazeWorld : BaseGameClass
+// {
+// private:
+//     GameEngine *engine;
+//     Maze maze;
+//     Player player;
+//     Enemy ghosts[4];
+
+// public:
+//     MazeWorld();
+
+//     void Init();
+
+//     void Update();
+// };
+
+// /* MAZE WORLD CPP */
+// //////////////////////////////////////////////////////////////
+// MazeWorld::MazeWorld() : BaseGameClass(0, 0)
+// {
+//     maze = new Maze(0, 0);
+//     player(&maze, 13, 23);
+
+
+// 	ghosts[1] = (&maze, &player, LCD_COLOR_RED, BLINKY_AI, 14, 11);
+// 	Enemy enemy2(&maze, &player, LCD_COLOR_MAGENTA, PINKY_AI, 12, 11);
+// 	Enemy enemy3(&maze, &player, &enemy1, LCD_COLOR_CYAN, INKY_AI, 10, 11);
+// 	Enemy enemy4(&maze, &player, LCD_COLOR_ORANGE, CLYDE_AI, 16, 11);
+// }
 
 /* MAIN */
 //////////////////////////////////////////////////////////////
