@@ -1,3 +1,10 @@
+# MBED files
+.circleci/
+BUILD/
+mbed-os/
+resources/
+*.mbed
+
 # Prerequisites
 *.d
 
