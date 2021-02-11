@@ -201,7 +201,7 @@ void GameEngine::MainGameLoop()
 		Update();
 		Draw();
 
-        wait_ms(100);
+        wait_ms(10);
 	}
 }
 
@@ -228,11 +228,17 @@ public:
 
 	Maze(int x, int y);
 
+    bool IsInBounds(int x, int y);
+
 	bool IsFloor(int x, int y);
 
 	bool IsFloorAdjecent(int x, int y, char direction);
 
 	bool IsFloorAdjecent(Position position, char direction);
+
+    bool IsFloorAdjecentScreenPos(int x, int y, char direction);
+
+    bool IsFloorAdjecentScreenPos(Position screenPos, char direction);
 
 	Position ScreenPosToTilePos(int x, int y);
 	Position ScreenPosToTilePos(Position screenPos);
@@ -315,10 +321,15 @@ Maze::Maze(int x, int y) : BaseGameClass(x, y)
 	SetClassicMaze();
 }
 
+bool Maze::IsInBounds(int x, int y)
+{
+    return x > -1 && x < WIDTH && y > -1 && y < HEIGHT;
+}
+
 bool Maze::IsFloor(int x, int y)
 {
 	//return _maze[x][y];
-	return (_maze[y] >> x) & 0x1;
+	return IsInBounds(x, y) && ((_maze[y] >> x) & 0x1);
 }
 
 bool Maze::IsFloorAdjecent(int x, int y, char direction)
@@ -348,6 +359,55 @@ bool Maze::IsFloorAdjecent(int x, int y, char direction)
 bool Maze::IsFloorAdjecent(Position position, char direction)
 {
 	return IsFloorAdjecent(position.x, position.y, direction);
+}
+
+bool Maze::IsFloorAdjecentScreenPos(int x, int y, char direction)
+{
+
+}
+
+bool Maze::IsFloorAdjecentScreenPos(Position screenPos, char direction)
+{
+    Position adjecentPosA;
+    Position adjecentPosB;
+
+    if (direction == NORTH)
+    {
+        adjecentPosA.x = screenPos.x;
+        adjecentPosA.y = screenPos.y - 1;
+
+        adjecentPosB.x = screenPos.x + TILE_SIZE - 1;
+        adjecentPosB.y = screenPos.y - 1;
+    }
+    else if (direction == EAST)
+    {
+        adjecentPosA.x = screenPos.x + TILE_SIZE;
+        adjecentPosA.y = screenPos.y;
+
+        adjecentPosB.x = screenPos.x + TILE_SIZE;
+        adjecentPosB.y = screenPos.y + TILE_SIZE - 1;
+    }
+    else if (direction == SOUTH)
+    {
+        adjecentPosA.x = screenPos.x;
+        adjecentPosA.y = screenPos.y + TILE_SIZE;
+
+        adjecentPosB.x = screenPos.x + TILE_SIZE - 1;
+        adjecentPosB.y = screenPos.y + TILE_SIZE;
+    }
+    else if (direction == WEST)
+    {
+        adjecentPosA.x = screenPos.x - 1;
+        adjecentPosA.y = screenPos.y;
+
+        adjecentPosB.x = screenPos.x - 1;
+        adjecentPosB.y = screenPos.y + TILE_SIZE - 1;
+    }
+
+    Position tilePosA = ScreenPosToTilePos(adjecentPosA);
+    Position tilePosB = ScreenPosToTilePos(adjecentPosB);
+
+    return IsFloor(tilePosA.x, tilePosA.y) && IsFloor(tilePosB.x, tilePosB.y);
 }
 
 Position Maze::ScreenPosToTilePos(int x, int y)
@@ -398,7 +458,7 @@ void Maze::Draw()
         {
             Position redrawPos = redrawStack.top();
             BSP_LCD_SetTextColor(LCD_COLOR_BLACK);
-            BSP_LCD_FillRect(redrawPos.x * TILE_SIZE, redrawPos.y * TILE_SIZE, TILE_SIZE, TILE_SIZE);
+            BSP_LCD_FillRect(redrawPos.x, redrawPos.y, TILE_SIZE, TILE_SIZE);
             redrawStack.pop();
         }
     }
@@ -438,8 +498,8 @@ void Player::SetDirection()
         uint16_t y1 = TS_State.touchY[0];
 
         // Get difference in x and y of the player character and the player's input
-        int xDiff = (position.x * TILE_SIZE) - x1;
-        int yDiff = (position.y * TILE_SIZE) - y1;
+        int xDiff = (position.x) - x1;
+        int yDiff = (position.y) - y1;
 
         // Find which has direction the greatest absolute value
         if (abs(xDiff) >= abs(yDiff))
@@ -472,7 +532,7 @@ void Player::SetDirection()
 
 }
 
-Player::Player(Maze* maze, int x, int y) : BaseGameSprite(x, y)
+Player::Player(Maze* maze, int x, int y) : BaseGameSprite(x * TILE_SIZE, y * TILE_SIZE)
 {
 	_maze = maze;
 	_nextDir = 0x0;
@@ -490,14 +550,14 @@ void Player::Update()
 
 	SetDirection();
 
-	if (_maze->IsFloorAdjecent(position, _nextDir))
+	if (_maze->IsFloorAdjecentScreenPos(position, _nextDir))
 	{
 		UpdatePosition(_nextDir);
 
 		lastDir = _nextDir;
 		_nextDir = 0x0;
 	}
-	else if (_maze->IsFloorAdjecent(position, lastDir))
+	else if (_maze->IsFloorAdjecentScreenPos(position, lastDir))
 	{
 		UpdatePosition(lastDir);
 	}
@@ -509,7 +569,7 @@ void Player::Draw()
 {
     //BSP_LCD_DrawPixel(position.x, position.y, LCD_COLOR_YELLOW);
     BSP_LCD_SetTextColor(LCD_COLOR_YELLOW);
-    BSP_LCD_FillRect(position.x * TILE_SIZE, position.y * TILE_SIZE, TILE_SIZE, TILE_SIZE);
+    BSP_LCD_FillRect(position.x, position.y, TILE_SIZE, TILE_SIZE);
 }
 
 /* ENEMY H */
@@ -594,24 +654,24 @@ void Enemy::SetTargetInfrontOfPlayer()
 	{
 		//_target = { _player->position.x, _player->position.y - 4 };
 		_target.x = _player->position.x;
-		_target.y = _player->position.y - 4;
+		_target.y = _player->position.y - (4 * TILE_SIZE);
 	}
 	else if (_player->lastDir == EAST)
 	{
 		//_target = { _player->position.x + 4, _player->position.y };
-		_target.x = _player->position.x + 4;
+		_target.x = _player->position.x + (4 * TILE_SIZE);
 		_target.y = _player->position.y;
 	}
 	else if (_player->lastDir == SOUTH)
 	{
 		//_target = { _player->position.x, _player->position.y + 4 };
 		_target.x = _player->position.x;
-		_target.y = _player->position.y + 4;
+		_target.y = _player->position.y + (4 * TILE_SIZE);
 	}
 	else if (_player->lastDir == WEST)
 	{
 		//_target = { _player->position.x - 4, _player->position.y };
-		_target.x = _player->position.x - 4;
+		_target.x = _player->position.x - (4 * TILE_SIZE);
 		_target.y = _player->position.y;
 	}
 }
@@ -623,24 +683,24 @@ void Enemy::SetTargetBlockPlayer()
 	{
 		//_target = { _player->position.x, _player->position.y - 2 };
 		_target.x = _player->position.x;
-		_target.y = _player->position.y - 2;
+		_target.y = _player->position.y - (2 * TILE_SIZE);
 	}
 	else if (_player->lastDir == EAST)
 	{
 		//_target = { _player->position.x + 2, _player->position.y };
-		_target.x = _player->position.x + 2;
+		_target.x = _player->position.x + (2 * TILE_SIZE);
 		_target.y = _player->position.y;
 	}
 	else if (_player->lastDir == SOUTH)
 	{
 		//_target = { _player->position.x, _player->position.y + 2 };
 		_target.x = _player->position.x;
-		_target.y = _player->position.y + 2;
+		_target.y = _player->position.y + (2 * TILE_SIZE);
 	}
 	else if (_player->lastDir == WEST)
 	{
 		//_target = { _player->position.x - 2, _player->position.y };
-		_target.x = _player->position.x - 2;
+		_target.x = _player->position.x - (2 * TILE_SIZE);
 		_target.y = _player->position.y;
 	}
 
@@ -655,7 +715,7 @@ void Enemy::SetTargetBlockPlayer()
 void Enemy::SetTargetClyde()
 {
 	// If distance to the player is greater than 8 tiles
-	if (GetManhattanDist(position, _player->position) > 8)
+	if (GetManhattanDist(position, _player->position) > (8 * TILE_SIZE))
 	{
 		SetTargetToPlayer();
 	}
@@ -663,7 +723,7 @@ void Enemy::SetTargetClyde()
 	{
 		//_target = { 0, HEIGHT };
 		_target.x = 0;
-		_target.y = HEIGHT;
+		_target.y = HEIGHT * TILE_SIZE;
 		
 	}
 
@@ -694,10 +754,10 @@ void Enemy::SetTarget()
 void Enemy::GetNextDir()
 {
 	// Find all possible tiles the enemy can move into, excluding the tile it has just moved away from
-	bool north = _lastDir != SOUTH && _maze->IsFloorAdjecent(position, NORTH);
-	bool east = _lastDir != WEST && _maze->IsFloorAdjecent(position, EAST);
-	bool south = _lastDir != NORTH && _maze->IsFloorAdjecent(position, SOUTH);
-	bool west = _lastDir != EAST && _maze->IsFloorAdjecent(position, WEST);
+	bool north = _lastDir != SOUTH && _maze->IsFloorAdjecentScreenPos(position, NORTH);
+	bool east = _lastDir != WEST && _maze->IsFloorAdjecentScreenPos(position, EAST);
+	bool south = _lastDir != NORTH && _maze->IsFloorAdjecentScreenPos(position, SOUTH);
+	bool west = _lastDir != EAST && _maze->IsFloorAdjecentScreenPos(position, WEST);
 
 	// For each passable tile, get manhattan distance to target
 	int northDist = -1;
@@ -718,7 +778,7 @@ void Enemy::GetNextDir()
 		dirs[3] = SOUTH;
 	}
 	*/
-	// Get manhattan distance from each neighbour to target and the smallest index
+	// Get distance from each neighbour to target and the smallest index
 	int smallestIndex = 0;
 	int smallestValue = -1;
 
@@ -757,7 +817,7 @@ void Enemy::GetNextDir()
 	_nextDir = dirs[smallestIndex];
 }
 
-Enemy::Enemy(Maze* maze, Player* player, uint16_t colour, char aiType, int x, int y) : BaseGameSprite(x, y)
+Enemy::Enemy(Maze* maze, Player* player, uint16_t colour, char aiType, int x, int y) : BaseGameSprite(x * TILE_SIZE, y * TILE_SIZE)
 {
 	_maze = maze;
 	_player = player;
@@ -767,7 +827,7 @@ Enemy::Enemy(Maze* maze, Player* player, uint16_t colour, char aiType, int x, in
 	_nextDir = 0x0;
 }
 
-Enemy::Enemy(Maze* maze, Player* player, Enemy* blinky, uint16_t colour, char aiType, int x, int y) : BaseGameSprite(x, y)
+Enemy::Enemy(Maze* maze, Player* player, Enemy* blinky, uint16_t colour, char aiType, int x, int y) : BaseGameSprite(x * TILE_SIZE, y * TILE_SIZE)
 {
 	_maze = maze;
 	_player = player;
@@ -798,7 +858,7 @@ void Enemy::Draw()
 {
     //BSP_LCD_DrawPixel(position.x, position.y, _colour);
     BSP_LCD_SetTextColor(_colour);
-    BSP_LCD_FillRect(position.x * TILE_SIZE, position.y * TILE_SIZE, TILE_SIZE, TILE_SIZE);
+    BSP_LCD_FillRect(position.x, position.y, TILE_SIZE, TILE_SIZE);
 }
 
 void LCDInit()
