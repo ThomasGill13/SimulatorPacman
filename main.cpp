@@ -45,7 +45,7 @@
 /* GLOBALS */
 //////////////////////////////////////////////////////////////
 char CurGameState = STARTUP;
-char NextGameState = PLAY;
+char NextGameState = STARTUP;
 TS_StateTypeDef TS_State = { 0 };
 
 /* STRUCTS */
@@ -617,7 +617,12 @@ void Player::Update()
     case STARTUP:
         Visible = true;
         MoveToStartPosition();
-        NextGameState = PLAY;
+
+        if(TS_State.touchDetected) 
+        {
+            SetDirection();
+            NextGameState = PLAY;
+        }
         break;
     case PLAY:
         _maze->redrawStack.push(position);
