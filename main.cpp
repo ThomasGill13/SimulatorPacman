@@ -1,12 +1,15 @@
 /* INCLUDES */
 //////////////////////////////////////////////////////////////
 
-#include "mbed.h"
+// C/C++ Standard Libraries
 #include <cstdint>
 #include <stdio.h>
 #include <cstdio>
 #include <cmath>
 #include <stack>
+
+// MBED Libraries
+#include "mbed.h"
 #include "stm32f413h_discovery_ts.h"
 #include "stm32f413h_discovery_lcd.h"
 
@@ -18,8 +21,10 @@
 #define SOUTH 0x4
 #define WEST 0x8
 
-#define MAX_GAME_OBJECTS 16
+// Game Engine defines
+#define MAX_GAME_OBJECTS 16 // Max number of objects that can be added to the game engine
 
+// Maze size (in tiles)
 #define WIDTH 28 // Due to the tile state in the 'x' axis being stored in a 32 bit int, this cannot be greater than 32
 #define HEIGHT 30 // Should be 31 in  a classic game of Pacman
 
@@ -37,7 +42,7 @@
 
 // Main Game World States
 #define SPLASH_SCREEN 0
-#define MAIN_MENU 1
+#define MAIN_MENU 1 // Not used
 #define STARTUP 2
 #define PLAY 3
 #define CONTINUE 4
@@ -47,12 +52,14 @@
 
 /* GLOBALS */
 //////////////////////////////////////////////////////////////
-char CurGameState = SPLASH_SCREEN;
-char NextGameState = SPLASH_SCREEN;
-TS_StateTypeDef TS_State = { 0 };
+char CurGameState = SPLASH_SCREEN; // Stores the current state of the game
+char NextGameState = SPLASH_SCREEN; // Stores what the next state will be
+TS_StateTypeDef TS_State = { 0 }; // Stores the state of the touchscreen input
 
 /* STRUCTS */
 //////////////////////////////////////////////////////////////
+
+// Stuct used to store co-ordinate values 
 struct Position
 {
 	int x;
@@ -61,72 +68,114 @@ struct Position
 
 /* BASE GAME CLASS H */
 //////////////////////////////////////////////////////////////
+
+// This class is designed to be inherited by all objects used in the game engine
 class BaseGameClass
 {
 public:
-	Position position;
-	bool Updating;
-	bool Visible;
-    bool Destroy;
+	Position position; // Stores the coordinate to draw the object on the screen
+	bool Updating; // When true, the object's "Update" function will be called in the main game engine loop
+	bool Visible; // When true, the object's "Draw" function will be called in the main game engine loop
+    bool Destroy; // Used as a flag to remove the object from the game engine
 
+    // Constructs the object, setting its position to (0, 0) and "Updating" and "Visible" flags to true
+    BaseGameClass();
 
+    // Constructs the object, setting its position to (x, y) and "Updating" and "Visible" flags to true
 	BaseGameClass(int x, int y);
 
+    // Virtual function to be overwritten by child classes
+    // Called in the main game engine "Init()"
 	virtual void Init();
 
+    // Virtual function to be overwritten by child classes
+    // Called in the main game engine "Update()"
 	virtual void Update();
 
+    // Virtual function to be overwritten by child classes
+    // Called in the main game engine "Draw()"
 	virtual void Draw();
 };
 
 /* BASE GAME CLASS CPP */
 //////////////////////////////////////////////////////////////
+
+// Constructs the object, setting its position to (0, 0) and "Updating" and "Visible" flags to true
+BaseGameClass::BaseGameClass()
+{
+    Updating = true;
+    Visible = true;
+    Destroy = false;
+	position.x = 0;
+	position.y = 0;
+}
+
+// Constructs the object, setting its position to (x, y) and "Updating" and "Visible" flags to true
 BaseGameClass::BaseGameClass(int x, int y)
 {
     Updating = true;
     Visible = true;
     Destroy = false;
-	//position = { x, y };
 	position.x = x;
 	position.y = y;
 }
 
-void BaseGameClass::Init()
-{
+// Virtual function to be overwritten by child classes
+// Called in the main game engine "Init()"
+void BaseGameClass::Init() {}
 
-}
+// Virtual function to be overwritten by child classes
+// Called in the main game engine "Update()"
+void BaseGameClass::Update() {}
 
-void BaseGameClass::Update()
-{
-
-}
-
-void BaseGameClass::Draw()
-{
-}
+// Virtual function to be overwritten by child classes
+// Called in the main game engine "Draw()"
+void BaseGameClass::Draw() {}
 
 /* BASE GAME SPRITE H */
 //////////////////////////////////////////////////////////////
+
+// This class is designed to be inherited by all sprite based objects used in the game engine
+// Inherits from "BaseGameClass"
+// Has extra functions for handling collisions and drawing basic single colour images stored as 1D char arrays
 class BaseGameSprite :
 	public BaseGameClass
 {
+// Protected variables/functions are accessible from child classes
 protected:
-    Position _startPosition;
+    Position _startPosition; // Stores the initial position of the object (used for resetting the position)
 
+    // Sets the object's position to "_startPosition"
     void MoveToStartPosition();
 
+    // Moves the object one pixel in the given direction
 	void UpdatePosition(char direction);
 
+    // Draws a simple single colour image stored in a 1D char array to the object's current position
+    // Array accessed like a 2D array, where each bit of the char stores whether the pixel should be drawn or not 
     void DrawSprite(char spriteImageArray[], uint16_t colour);
 
+    // Draws a simple single colour image stored in a 1D char array to the object's current position
+    // Array accessed like a 2D array, where each bit of the char stores whether the pixel should be drawn or not
+    // The input image will be flipped horizontally on the display
     void DrawSpriteFlippedHorizontal(char spriteImageArray[], uint16_t colour);
 
+    // Draws a simple single colour image stored in a 1D char array to the object's current position
+    // Array accessed like a 2D array, where each bit of the char stores whether the pixel should be drawn or not
+    // The input image will be rotated anti-clockwise 90 degrees on the display
     void DrawSpriteRotated90(char spriteImageArray[], uint16_t colour);
 
+    // Draws a simple single colour image stored in a 1D char array to the object's current position
+    // Array accessed like a 2D array, where each bit of the char stores whether the pixel should be drawn or not
+    // The input image will be rotated anti-clockwise 270 degrees on the display
     void DrawSpriteRotated270(char spriteImageArray[], uint16_t colour);
 public:
+    // Constructs the object, setting its position to (x, y) and "Updating" and "Visible" flags to true
+    // "_startPosition" will be set to (x, y)
 	BaseGameSprite(int x, int y);
 
+    // Checks if this object has collided with the object "sprite"
+    // Collision is done using a simple bounding box algorithm, with the box dimensions of TILE_SIZE * TILE_SIZE
     bool HasCollided(BaseGameSprite *sprite);
 };
 
