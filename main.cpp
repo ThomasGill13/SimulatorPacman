@@ -683,7 +683,7 @@ void Maze::DrawTile(int x, int y)
     {
         // BSP_LCD_DrawPixel(i, j, LCD_COLOR_BLACK);
         BSP_LCD_SetTextColor(LCD_COLOR_BLACK);
-        BSP_LCD_FillRect(x * TILE_SIZE, y * TILE_SIZE, TILE_SIZE, TILE_SIZE);
+        BSP_LCD_FillRect(x * TILE_SIZE, y * TILE_SIZE, TILE_SIZE, TILE_SIZE - 1);
 
         if (IsPellet(x, y))
         {
@@ -695,7 +695,7 @@ void Maze::DrawTile(int x, int y)
     {
         // BSP_LCD_DrawPixel(i, j, LCD_COLOR_BLUE);
         BSP_LCD_SetTextColor(LCD_COLOR_BLUE);
-        BSP_LCD_FillRect(x * TILE_SIZE, y * TILE_SIZE, TILE_SIZE, TILE_SIZE);
+        BSP_LCD_FillRect(x * TILE_SIZE, y * TILE_SIZE, TILE_SIZE, TILE_SIZE - 1);
     }
 }
 
