@@ -1,5 +1,5 @@
-# MbedSimulatorPacman
- A Pacman-Like Game for the MBED Simulator.
+# MBED Online Simulator Pacman Demo
+ A Pacman-Like Game Demo for the MBED Online Simulator.
  
  ## HOW TO PLAY
  - Copy all the text inside of [main.cpp](main.cpp)
