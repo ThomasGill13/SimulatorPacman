@@ -254,7 +254,7 @@ BaseGameSprite::BaseGameSprite(int x, int y) : BaseGameClass(x, y)
 
 bool BaseGameSprite::HasCollided(BaseGameSprite *sprite)
 {
-    return position.x >= sprite->position.x && position.x <= sprite->position.x + TILE_SIZE && position.y >= sprite->position.y && position.y <= sprite->position.y + TILE_SIZE;
+    return position.x < sprite->position.x + TILE_SIZE && position.x + TILE_SIZE > sprite->position.x && position.y < sprite->position.y + TILE_SIZE && position.y + TILE_SIZE > sprite->position.y;
 }
 
 /* GAME ENGINE H */
