@@ -181,7 +181,7 @@ void BaseGameSprite::DrawSprite(char *spriteImageArray, uint16_t colour)
             }
             else 
             {
-                BSP_LCD_DrawPixel(position.x + i, position.y + j, LCD_COLOR_BLACK);
+                //BSP_LCD_DrawPixel(position.x + i, position.y + j, LCD_COLOR_BLACK);
             }
         }
     }
@@ -200,7 +200,7 @@ void BaseGameSprite::DrawSpriteFlippedHorizontal(char spriteImageArray[], uint16
             }
             else 
             {
-                BSP_LCD_DrawPixel(position.x + (TILE_SIZE - 1 - i), position.y + j, LCD_COLOR_BLACK);
+                //BSP_LCD_DrawPixel(position.x + (TILE_SIZE - 1 - i), position.y + j, LCD_COLOR_BLACK);
             }
         }
     }
@@ -220,7 +220,7 @@ void BaseGameSprite::DrawSpriteRotated90(char spriteImageArray[], uint16_t colou
             }
             else 
             {
-                BSP_LCD_DrawPixel(position.x + i, position.y + j, LCD_COLOR_BLACK);
+                //BSP_LCD_DrawPixel(position.x + i, position.y + j, LCD_COLOR_BLACK);
             }
         }
     }
@@ -240,7 +240,7 @@ void BaseGameSprite::DrawSpriteRotated270(char spriteImageArray[], uint16_t colo
             }
             else 
             {
-                BSP_LCD_DrawPixel(position.x + i, position.y + j, LCD_COLOR_BLACK);
+                //BSP_LCD_DrawPixel(position.x + i, position.y + j, LCD_COLOR_BLACK);
             }
         }
     }
