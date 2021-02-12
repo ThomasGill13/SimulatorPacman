@@ -41,8 +41,9 @@
 #define STARTUP 2
 #define PLAY 3
 #define CONTINUE 4
-#define DEAD 5
-#define GAME_OVER 6
+#define NEXT_LEVEL 5
+#define DEAD 6
+#define GAME_OVER 7
 
 /* GLOBALS */
 //////////////////////////////////////////////////////////////
@@ -274,8 +275,12 @@ private:
     void SetPelletsClassicMaze();
 
     void DrawTile(int x, int y);
+
+    int GetPelletCount();
 public:
     std::stack<Position> redrawStack;
+
+    int maxPellets;
 
 	Maze(int x, int y);
 
@@ -406,12 +411,28 @@ void Maze::SetPelletsClassicMaze()
     _pellets[29] = 0x0;
 }
 
+int Maze::GetPelletCount()
+{
+    int count = 0;
+
+    for (int i = 0; i < WIDTH; i++)
+    {
+        for (int j = 0; j < HEIGHT; j++)
+        {
+            count += IsPellet(i, j);
+        }
+    }
+
+    return count;
+}
+
 Maze::Maze(int x, int y) : BaseGameClass(x, y)
 {
     _initialDraw = true;
 	//SetTestMaze();
 	SetClassicMaze();
     SetPelletsClassicMaze();
+    maxPellets = GetPelletCount();
 }
 
 bool Maze::IsInBounds(int x, int y)
@@ -554,6 +575,11 @@ void Maze::Update()
     case CONTINUE:
         _initialDraw = true;
         break;
+    case NEXT_LEVEL:
+        _initialDraw = true;
+        Visible = true;
+        SetPelletsClassicMaze();
+        break;
     case PLAY:
         break;
     case DEAD:
@@ -627,6 +653,7 @@ private:
 	Maze* _maze;
 	int _lives;
     int _score;
+    int _level;
 
 	char _nextDir;
 
@@ -696,12 +723,13 @@ Player::Player(Maze* maze, int x, int y) : BaseGameSprite(x * TILE_SIZE, y * TIL
 	lastDir = EAST;
     _score = 0;
     _lives = 3;
+    _level = 1;
 }
 
 void Player::Init()
 {
     _score = 0;
-    _lives = 3;
+    _lives = 10;
 }
 
 void Player::Update()
@@ -719,7 +747,15 @@ void Player::Update()
         }
         break;
     case CONTINUE:
-        Visible = true;
+        MoveToStartPosition();
+
+        if(TS_State.touchDetected) 
+        {
+            SetDirection();
+            NextGameState = PLAY;
+        }
+        break;
+    case NEXT_LEVEL:
         MoveToStartPosition();
 
         if(TS_State.touchDetected) 
@@ -745,6 +781,12 @@ void Player::Update()
             UpdatePosition(lastDir);
             _score += _maze->TryRemovePelletScreenPos(position);
         }
+
+        if (_score == _maze->maxPellets * _level)
+        {
+            _level++;
+            NextGameState = NEXT_LEVEL;
+        }
         break;
     case DEAD:
         NextGameState = CONTINUE;
@@ -756,6 +798,9 @@ void Player::Update()
             NextGameState = GAME_OVER;
         }
         break;
+    case GAME_OVER:
+        Visible = false;
+        _level = 1;
     default:
         Visible = false;
         break;
@@ -773,7 +818,7 @@ void Player::Draw()
     BSP_LCD_SetBackColor(LCD_COLOR_BLUE);  
 
     char buffer[20];
-    sprintf(buffer, "LEVEL %d  SCORE %d  LIVES %d", 1, _score, _lives);
+    sprintf(buffer, "LEVEL %d  SCORE %d  LIVES %d", _level, _score, _lives);
     BSP_LCD_DisplayStringAtLine(0, (uint8_t *) buffer);
 }
 
@@ -1053,6 +1098,9 @@ void Enemy::Update()
         MoveToStartPosition();
         break;
     case CONTINUE:
+        MoveToStartPosition();
+        break;
+    case NEXT_LEVEL:
         MoveToStartPosition();
         break;
     case PLAY:
