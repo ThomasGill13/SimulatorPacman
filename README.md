@@ -2,9 +2,9 @@
  A Pacman-Like Game Demo for the MBED Online Simulator.
  
  ## HOW TO PLAY
- - Copy all the text inside of [main.cpp](main.cpp) (Quickest way is to click on **Raw** on GitHub Online and then press `CTRL+A` to highlight all text and then `CTRL+C to copy`)
+ - Copy all the text inside of [main.cpp](https://raw.githubusercontent.com/ThomasGill13/SimulatorPacman/main/main.cpp) (press `CTRL+A` to highlight all text and then `CTRL+C to copy`)
  - Open the [MBED Online Simulator](https://simulator.mbed.com/)
- - Paste [main.cpp](main.cpp) into the text pane on the left of the web page
+ - Paste [main.cpp](https://raw.githubusercontent.com/ThomasGill13/SimulatorPacman/main/main.cpp) into the text pane on the left of the web page
  - Press **Run**
  - Wait for the code to compile
  - Press **Add Component** and add *"ST7789H2 LCD + FT6x06 Touch Screen"* if hasn't appeared automatically
