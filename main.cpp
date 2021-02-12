@@ -2,6 +2,7 @@
 //////////////////////////////////////////////////////////////
 
 #include "mbed.h"
+#include <cstdint>
 #include <stdio.h>
 #include <cstdio>
 #include <cmath>
@@ -44,8 +45,8 @@
 
 /* GLOBALS */
 //////////////////////////////////////////////////////////////
-char CurGameState = STARTUP;
-char NextGameState = STARTUP;
+char CurGameState = SPLASH_SCREEN;
+char NextGameState = SPLASH_SCREEN;
 TS_StateTypeDef TS_State = { 0 };
 
 /* STRUCTS */
@@ -1068,6 +1069,109 @@ void Enemy::Draw()
     BSP_LCD_FillRect(position.x, position.y, TILE_SIZE, TILE_SIZE);
 }
 
+/* SPLASH SCREEN H */
+//////////////////////////////////////////////////////////////
+class SplashScreen :
+	public BaseGameClass
+{
+private:
+    int _frameCount;
+public:
+
+    SplashScreen();
+
+    void Update();
+
+    void Draw();
+};
+
+/* SPLASH SCREEN CPP */
+//////////////////////////////////////////////////////////////
+
+SplashScreen::SplashScreen() : BaseGameClass(0, 0)
+{
+    _frameCount = 0;
+}
+
+void SplashScreen::Update()
+{
+    switch (CurGameState) {
+    case SPLASH_SCREEN:
+        Visible = true;
+        _frameCount++;
+
+        if (_frameCount >= 50)
+        {
+            NextGameState = STARTUP;
+            _frameCount = 0;
+        }
+        break;
+    default:
+        Visible = false;
+        break;
+    }
+}
+
+void SplashScreen::Draw()
+{
+    BSP_LCD_Clear(LCD_COLOR_BLACK);
+    BSP_LCD_SetTextColor(LCD_COLOR_WHITE);
+    BSP_LCD_SetBackColor(LCD_COLOR_BLACK);
+    BSP_LCD_DisplayStringAt(0, BSP_LCD_GetYSize() / 2, (uint8_t *) "A Pacman-Like Game", CENTER_MODE);
+    BSP_LCD_DisplayStringAt(0, (BSP_LCD_GetYSize() / 2) + 8, (uint8_t *) "for MBED Simulator", CENTER_MODE);
+    BSP_LCD_DisplayStringAt(0, (BSP_LCD_GetYSize() / 2) + 16, (uint8_t *) "by Thomas Barnaby Gill", CENTER_MODE);
+}
+
+/* GAME OVER SCREEN H */
+//////////////////////////////////////////////////////////////
+class GameOverScreen :
+	public BaseGameClass
+{
+public:
+
+    GameOverScreen();
+
+    void Update();
+
+    void Draw();
+};
+
+/* SPLASH SCREEN CPP */
+//////////////////////////////////////////////////////////////
+
+GameOverScreen::GameOverScreen() : BaseGameClass(0, 0)
+{
+
+}
+
+void GameOverScreen::Update()
+{
+    switch (CurGameState) {
+    case GAME_OVER:
+        Visible = true;
+
+        if (TS_State.touchDetected)
+        {
+            NextGameState = STARTUP;
+        }
+        break;
+    default:
+        Visible = false;
+        break;
+    }
+}
+
+void GameOverScreen::Draw()
+{
+    BSP_LCD_Clear(LCD_COLOR_BLACK);
+    BSP_LCD_SetTextColor(LCD_COLOR_WHITE);
+    BSP_LCD_SetBackColor(LCD_COLOR_BLACK);
+    BSP_LCD_DisplayStringAt(0, BSP_LCD_GetYSize() / 2, (uint8_t *) "GAME OVER", CENTER_MODE);
+    BSP_LCD_DisplayStringAt(0, (BSP_LCD_GetYSize() / 2) + 16, (uint8_t *) "Touch Screen to Play Again...", CENTER_MODE);
+}
+
+/* Other Functions */
+//////////////////////////////////////////////////////////////
 void LCDInit()
 {
     BSP_LCD_Init();
@@ -1081,12 +1185,8 @@ void LCDInit()
     BSP_LCD_Clear(LCD_COLOR_WHITE);
 }
 
-/* SPLASH SCREEN H */
-//////////////////////////////////////////////////////////////
 
 
-/* SPLASH SCREEN CPP */
-//////////////////////////////////////////////////////////////
 
 /* MAZE WORLD H */
 //////////////////////////////////////////////////////////////
@@ -1132,11 +1232,16 @@ int main()
 
 	Player player(&maze, 13, 22);
 
+    SplashScreen splash;
+    GameOverScreen gameOver;
+
 	Enemy enemy1(&maze, &player, LCD_COLOR_RED, BLINKY_AI, 14, 12);
 	Enemy enemy2(&maze, &player, LCD_COLOR_MAGENTA, PINKY_AI, 12, 12);
 	Enemy enemy3(&maze, &player, &enemy1, LCD_COLOR_CYAN, INKY_AI, 10, 12);
 	Enemy enemy4(&maze, &player, LCD_COLOR_ORANGE, CLYDE_AI, 16, 12);
 
+    engine.AddGameObject(&splash);
+    engine.AddGameObject(&gameOver);
 	engine.AddGameObject(&maze);
 	engine.AddGameObject(&player);
 
