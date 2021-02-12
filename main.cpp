@@ -40,8 +40,9 @@
 #define MAIN_MENU 1
 #define STARTUP 2
 #define PLAY 3
-#define DEAD 4
-#define GAME_OVER 5
+#define CONTINUE 4
+#define DEAD 5
+#define GAME_OVER 6
 
 /* GLOBALS */
 //////////////////////////////////////////////////////////////
@@ -548,12 +549,14 @@ void Maze::Update()
     case STARTUP:
         _initialDraw = true;
         Visible = true;
+        SetPelletsClassicMaze();
+        break;
+    case CONTINUE:
+        _initialDraw = true;
         break;
     case PLAY:
-        Visible = true;
         break;
     case DEAD:
-        Visible = true;
         break;
     default:
         Visible = false;
@@ -697,13 +700,25 @@ Player::Player(Maze* maze, int x, int y) : BaseGameSprite(x * TILE_SIZE, y * TIL
 
 void Player::Init()
 {
-
+    _score = 0;
+    _lives = 3;
 }
 
 void Player::Update()
 {
     switch (CurGameState) {
     case STARTUP:
+        Visible = true;
+        Init();
+        MoveToStartPosition();
+
+        if(TS_State.touchDetected) 
+        {
+            SetDirection();
+            NextGameState = PLAY;
+        }
+        break;
+    case CONTINUE:
         Visible = true;
         MoveToStartPosition();
 
@@ -732,7 +747,7 @@ void Player::Update()
         }
         break;
     case DEAD:
-        NextGameState = STARTUP;
+        NextGameState = CONTINUE;
         _lives--;
         printf("Score = %d\nLives = %d\n", _score, _lives);
 
@@ -1037,6 +1052,9 @@ void Enemy::Update()
         Visible = true;
         MoveToStartPosition();
         break;
+    case CONTINUE:
+        MoveToStartPosition();
+        break;
     case PLAY:
         _maze->redrawStack.push(position);
 
@@ -1117,9 +1135,10 @@ void SplashScreen::Draw()
     BSP_LCD_Clear(LCD_COLOR_BLACK);
     BSP_LCD_SetTextColor(LCD_COLOR_WHITE);
     BSP_LCD_SetBackColor(LCD_COLOR_BLACK);
-    BSP_LCD_DisplayStringAt(0, BSP_LCD_GetYSize() / 2, (uint8_t *) "A Pacman-Like Game", CENTER_MODE);
-    BSP_LCD_DisplayStringAt(0, (BSP_LCD_GetYSize() / 2) + 8, (uint8_t *) "for MBED Simulator", CENTER_MODE);
+    BSP_LCD_DisplayStringAt(0, BSP_LCD_GetYSize() / 2 - 8, (uint8_t *) "A Pacman-Like Game", CENTER_MODE);
+    BSP_LCD_DisplayStringAt(0, (BSP_LCD_GetYSize() / 2), (uint8_t *) "for MBED Simulator", CENTER_MODE);
     BSP_LCD_DisplayStringAt(0, (BSP_LCD_GetYSize() / 2) + 16, (uint8_t *) "by Thomas Barnaby Gill", CENTER_MODE);
+    BSP_LCD_DisplayStringAt(0, (BSP_LCD_GetYSize() / 2) + 24, (uint8_t *) "University of Leeds", CENTER_MODE);
 }
 
 /* GAME OVER SCREEN H */
