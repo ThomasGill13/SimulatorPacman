@@ -679,13 +679,13 @@ void Maze::Update()
 
 void Maze::DrawTile(int x, int y)
 {
-    if (IsFloor(x, y)) 
+    if (IsFloor(x, y) || !IsInBounds(x, y)) 
     {
         // BSP_LCD_DrawPixel(i, j, LCD_COLOR_BLACK);
         BSP_LCD_SetTextColor(LCD_COLOR_BLACK);
         BSP_LCD_FillRect(x * TILE_SIZE, y * TILE_SIZE, TILE_SIZE, TILE_SIZE - 1);
 
-        if (IsPellet(x, y))
+        if (IsInBounds(x, y) && IsPellet(x, y))
         {
             BSP_LCD_SetTextColor(LCD_COLOR_YELLOW);
             BSP_LCD_FillCircle((x * TILE_SIZE) + (TILE_SIZE / 2), (y * TILE_SIZE) + (TILE_SIZE / 2), 1);
@@ -963,7 +963,14 @@ void Player::Draw()
     BSP_LCD_SetBackColor(LCD_COLOR_BLUE);  
 
     char buffer[20];
-    sprintf(buffer, "LEVEL %d  SCORE %d  LIVES %d", _level, _score, _lives);
+    if (CurGameState == PLAY)
+    {
+        sprintf(buffer, "  LEVEL %d  SCORE %d  LIVES %d   ", _level, _score, _lives);
+    }
+    else 
+    {
+        sprintf(buffer, "     TOUCH SCREEN TO START...");
+    }
     BSP_LCD_DisplayStringAtLine(0, (uint8_t *) buffer);
 }
 
