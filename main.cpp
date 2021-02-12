@@ -116,6 +116,14 @@ protected:
     void MoveToStartPosition();
 
 	void UpdatePosition(char direction);
+
+    void DrawSprite(char spriteImageArray[], uint16_t colour);
+
+    void DrawSpriteFlippedHorizontal(char spriteImageArray[], uint16_t colour);
+
+    void DrawSpriteRotated90(char spriteImageArray[], uint16_t colour);
+
+    void DrawSpriteRotated270(char spriteImageArray[], uint16_t colour);
 public:
 	BaseGameSprite(int x, int y);
 
@@ -156,6 +164,85 @@ void BaseGameSprite::UpdatePosition(char direction)
     else if (position.x == (WIDTH - 1) * TILE_SIZE)
     {
         position.x = 0;
+    }
+}
+
+void BaseGameSprite::DrawSprite(char *spriteImageArray, uint16_t colour)
+{
+    //BSP_LCD_SetTextColor(colour);
+    for (int i = 0; i < TILE_SIZE; i++)
+    {
+        for (int j = 0; j < TILE_SIZE; j++)
+        {
+            // Get image bit
+            if (((spriteImageArray[j] >> i) & 0x1))
+            {
+                BSP_LCD_DrawPixel(position.x + i, position.y + j, colour);
+            }
+            else 
+            {
+                BSP_LCD_DrawPixel(position.x + i, position.y + j, LCD_COLOR_BLACK);
+            }
+        }
+    }
+}
+
+void BaseGameSprite::DrawSpriteFlippedHorizontal(char spriteImageArray[], uint16_t colour)
+{
+    for (int i = 0; i < TILE_SIZE; i++)
+    {
+        for (int j = 0; j < TILE_SIZE; j++)
+        {
+            // Get image bit
+            if (((spriteImageArray[j] >> i) & 0x1))
+            {
+                BSP_LCD_DrawPixel(position.x + (TILE_SIZE - 1 - i), position.y + j, colour);
+            }
+            else 
+            {
+                BSP_LCD_DrawPixel(position.x + (TILE_SIZE - 1 - i), position.y + j, LCD_COLOR_BLACK);
+            }
+        }
+    }
+}
+
+void BaseGameSprite::DrawSpriteRotated90(char spriteImageArray[], uint16_t colour)
+{
+    //BSP_LCD_SetTextColor(colour);
+    for (int i = 0; i < TILE_SIZE; i++)
+    {
+        for (int j = 0; j < TILE_SIZE; j++)
+        {
+            // Get image bit
+            if (((spriteImageArray[i] >> j) & 0x1))
+            {
+                BSP_LCD_DrawPixel(position.x + i, position.y + j, colour);
+            }
+            else 
+            {
+                BSP_LCD_DrawPixel(position.x + i, position.y + j, LCD_COLOR_BLACK);
+            }
+        }
+    }
+}
+
+void BaseGameSprite::DrawSpriteRotated270(char spriteImageArray[], uint16_t colour)
+{
+    //BSP_LCD_SetTextColor(colour);
+    for (int i = 0; i < TILE_SIZE; i++)
+    {
+        for (int j = 0; j < TILE_SIZE; j++)
+        {
+            // Get image bit
+            if (((spriteImageArray[i] >> (TILE_SIZE - 1 - j)) & 0x1))
+            {
+                BSP_LCD_DrawPixel(position.x + i, position.y + j, colour);
+            }
+            else 
+            {
+                BSP_LCD_DrawPixel(position.x + i, position.y + j, LCD_COLOR_BLACK);
+            }
+        }
     }
 }
 
@@ -657,6 +744,14 @@ private:
 
 	char _nextDir;
 
+    bool _mouthOpen;
+
+    // 2D arrays to store simple, monocolour images
+    char _closedMouthImage[TILE_SIZE];
+    char _openMouthImage[TILE_SIZE];
+
+    void SetImageArrays();
+
 	void SetDirection();
 
 public:
@@ -673,6 +768,27 @@ public:
 
 /* PLAYER CPP */
 //////////////////////////////////////////////////////////////
+void Player::SetImageArrays()
+{
+    _closedMouthImage[0] = 0x18;
+    _closedMouthImage[1] = 0x3C;
+    _closedMouthImage[2] = 0x7E;
+    _closedMouthImage[3] = 0xFF;
+    _closedMouthImage[4] = 0xFF;
+    _closedMouthImage[5] = 0x7E;
+    _closedMouthImage[6] = 0x3C;
+    _closedMouthImage[7] = 0x18;
+
+    _openMouthImage[0] = 0x18;
+    _openMouthImage[1] = 0x3C;
+    _openMouthImage[2] = 0x7E;
+    _openMouthImage[3] = 0xF0;
+    _openMouthImage[4] = 0xE0;
+    _openMouthImage[5] = 0x70;
+    _openMouthImage[6] = 0x3E;
+    _openMouthImage[7] = 0x18;
+}
+
 void Player::SetDirection()
 {
     if(TS_State.touchDetected) {
@@ -724,6 +840,9 @@ Player::Player(Maze* maze, int x, int y) : BaseGameSprite(x * TILE_SIZE, y * TIL
     _score = 0;
     _lives = 3;
     _level = 1;
+    _mouthOpen = false;
+
+    SetImageArrays();
 }
 
 void Player::Init()
@@ -739,6 +858,7 @@ void Player::Update()
         Visible = true;
         Init();
         MoveToStartPosition();
+        _mouthOpen = false;
 
         if(TS_State.touchDetected) 
         {
@@ -748,6 +868,7 @@ void Player::Update()
         break;
     case CONTINUE:
         MoveToStartPosition();
+        _mouthOpen = false;
 
         if(TS_State.touchDetected) 
         {
@@ -787,6 +908,9 @@ void Player::Update()
             _level++;
             NextGameState = NEXT_LEVEL;
         }
+
+        _mouthOpen = !_mouthOpen;
+
         break;
     case DEAD:
         NextGameState = CONTINUE;
@@ -810,8 +934,29 @@ void Player::Update()
 void Player::Draw()
 {
     //BSP_LCD_DrawPixel(position.x, position.y, LCD_COLOR_YELLOW);
-    BSP_LCD_SetTextColor(LCD_COLOR_YELLOW);
-    BSP_LCD_FillRect(position.x, position.y, TILE_SIZE, TILE_SIZE);
+    // BSP_LCD_SetTextColor(LCD_COLOR_YELLOW);
+    // BSP_LCD_FillRect(position.x, position.y, TILE_SIZE, TILE_SIZE);
+
+    if (!_mouthOpen)
+    {
+        DrawSprite(_closedMouthImage, LCD_COLOR_YELLOW);
+    }
+    else if (lastDir == NORTH)
+    {
+        DrawSpriteRotated90(_openMouthImage, LCD_COLOR_YELLOW);
+    }
+    else if (lastDir == WEST)
+    {
+        DrawSprite(_openMouthImage, LCD_COLOR_YELLOW);
+    }
+    else if (lastDir == SOUTH)
+    {
+        DrawSpriteRotated270(_openMouthImage, LCD_COLOR_YELLOW);
+    }
+    else if (lastDir == EAST)
+    {
+        DrawSpriteFlippedHorizontal(_openMouthImage, LCD_COLOR_YELLOW);
+    }
 
     // Draw game state info at the top of the screen
     BSP_LCD_SetTextColor(LCD_COLOR_WHITE);
@@ -836,6 +981,19 @@ private:
 	char _nextDir;
 	char _aiType;
     uint16_t _colour;
+
+    char _horizontalLookImageA[TILE_SIZE];
+    char _horizontalLookImageB[TILE_SIZE];
+
+    char _northLookImageA[TILE_SIZE];
+    char _northLookImageB[TILE_SIZE];
+
+    char _southLookImageA[TILE_SIZE];
+    char _southLookImageB[TILE_SIZE];
+
+    bool _imageA;
+
+    void SetImageArrays();
 
 	int GetManhattanDist(int x0, int y0, int x1, int y1);
 
@@ -873,6 +1031,63 @@ public:
 
 /* ENEMY CPP */
 //////////////////////////////////////////////////////////////
+void Enemy::SetImageArrays()
+{
+    _horizontalLookImageA[0] = 0x18;
+    _horizontalLookImageA[1] = 0x3C;
+    _horizontalLookImageA[2] = 0x7E;
+    _horizontalLookImageA[3] = 0x6A;
+    _horizontalLookImageA[4] = 0x6A;
+    _horizontalLookImageA[5] = 0x7E;
+    _horizontalLookImageA[6] = 0x7E;
+    _horizontalLookImageA[7] = 0x2A;
+
+    _horizontalLookImageB[0] = 0x18;
+    _horizontalLookImageB[1] = 0x3C;
+    _horizontalLookImageB[2] = 0x7E;
+    _horizontalLookImageB[3] = 0x6A;
+    _horizontalLookImageB[4] = 0x6A;
+    _horizontalLookImageB[5] = 0x7E;
+    _horizontalLookImageB[6] = 0x7E;
+    _horizontalLookImageB[7] = 0x54;
+
+    _northLookImageA[0] = 0x18;
+    _northLookImageA[1] = 0x3C;
+    _northLookImageA[2] = 0x5A;
+    _northLookImageA[3] = 0x5A;
+    _northLookImageA[4] = 0x7E;
+    _northLookImageA[5] = 0x7E;
+    _northLookImageA[6] = 0x7E;
+    _northLookImageA[7] = 0x2A;
+
+    _northLookImageB[0] = 0x18;
+    _northLookImageB[1] = 0x3C;
+    _northLookImageB[2] = 0x5A;
+    _northLookImageB[3] = 0x5A;
+    _northLookImageB[4] = 0x7E;
+    _northLookImageB[5] = 0x7E;
+    _northLookImageB[6] = 0x7E;
+    _northLookImageB[7] = 0x54;
+
+    _southLookImageA[0] = 0x18;
+    _southLookImageA[1] = 0x3C;
+    _southLookImageA[2] = 0x5A;
+    _southLookImageA[3] = 0x5A;
+    _southLookImageA[4] = 0x7E;
+    _southLookImageA[5] = 0x7E;
+    _southLookImageA[6] = 0x7E;
+    _southLookImageA[7] = 0x2A;
+
+    _southLookImageB[0] = 0x18;
+    _southLookImageB[1] = 0x3C;
+    _southLookImageB[2] = 0x7E;
+    _southLookImageB[3] = 0x5A;
+    _southLookImageB[4] = 0x5A;
+    _southLookImageB[5] = 0x7E;
+    _southLookImageB[6] = 0x7E;
+    _southLookImageB[7] = 0x54;
+}
+
 int Enemy::GetManhattanDist(int x0, int y0, int x1, int y1)
 {
 	return abs(x0 - x1) + abs(y0 - y1);
@@ -1073,6 +1288,8 @@ Enemy::Enemy(Maze* maze, Player* player, uint16_t colour, char aiType, int x, in
 	_aiType = aiType;
 	_lastDir = 0x0;
 	_nextDir = 0x0;
+    _imageA = true;
+    SetImageArrays();
 }
 
 Enemy::Enemy(Maze* maze, Player* player, Enemy* blinky, uint16_t colour, char aiType, int x, int y) : BaseGameSprite(x * TILE_SIZE, y * TILE_SIZE)
@@ -1084,6 +1301,8 @@ Enemy::Enemy(Maze* maze, Player* player, Enemy* blinky, uint16_t colour, char ai
 	_blinky = blinky;
 	_lastDir = 0x0;
 	_nextDir = 0x0;
+    _imageA = true;
+    SetImageArrays();
 }
 
 void Enemy::Init()
@@ -1118,6 +1337,8 @@ void Enemy::Update()
             printf("Collided with Player!\n");
             NextGameState = DEAD;
         }
+
+        _imageA = !_imageA;
         break;
     case DEAD:
         break;
@@ -1132,7 +1353,52 @@ void Enemy::Draw()
 {
     //BSP_LCD_DrawPixel(position.x, position.y, _colour);
     BSP_LCD_SetTextColor(_colour);
-    BSP_LCD_FillRect(position.x, position.y, TILE_SIZE, TILE_SIZE);
+    //BSP_LCD_FillRect(position.x, position.y, TILE_SIZE, TILE_SIZE);
+
+    if (_lastDir == NORTH)
+    {
+        if (_imageA)
+        {
+            DrawSprite(_northLookImageA, _colour);
+        }
+        else 
+        {
+            DrawSprite(_northLookImageB, _colour);
+        }
+    }
+    else if (_lastDir == EAST)
+    {
+        if (_imageA)
+        {
+            DrawSpriteFlippedHorizontal(_horizontalLookImageA, _colour);
+        }
+        else 
+        {
+            DrawSpriteFlippedHorizontal(_horizontalLookImageB, _colour);
+        }
+    }
+    else if (_lastDir == SOUTH)
+    {
+        if (_imageA)
+        {
+            DrawSprite(_southLookImageA, _colour);
+        }
+        else 
+        {
+            DrawSprite(_southLookImageB, _colour);
+        }
+    }
+    else
+    {
+        if (_imageA)
+        {
+            DrawSprite(_horizontalLookImageA, _colour);
+        }
+        else 
+        {
+            DrawSprite(_horizontalLookImageB, _colour);
+        }
+    }
 }
 
 /* SPLASH SCREEN H */
