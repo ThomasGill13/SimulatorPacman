@@ -370,6 +370,7 @@ public:
 	GameEngine();
 
     // Adds the given game object to the master array
+    // Increments '_GameObjectCount'
 	void AddGameObject(BaseGameClass* gameObject);
 
     // Main game loop function
@@ -426,79 +427,133 @@ GameEngine::GameEngine()
     _GameObjectCount = 0;
 }
 
+// Adds the given game object to the master array
+// Increments '_GameObjectCount'
 void GameEngine::AddGameObject(BaseGameClass* gameObject)
 {
 	_GameObjects[_GameObjectCount] = gameObject;
 	_GameObjectCount++;
 }
 
+// Main game loop function
+// The game loop performs the following:
+//     1 - Initialises all game objects        (Calls Init() for all objects in the master array)
+//     2 - Updates game objects                (Calls Update() for all objects in the master array)
+//     3 - Draws game objects to the screen    (Calls Draw() for all objects in the master array)
+//     4 - Return to step 2
 void GameEngine::MainGameLoop()
 {
+    // Initialise all objects
 	Init();
 
 	while (true)
 	{
+        // Read the state of the touch screen and store it to 'TS_State'
         BSP_TS_GetState(&TS_State);
 
+        // Update game logic for all objects
 		Update();
+
+        // Draw all game objects to the screen
 		Draw();
 
+        // Change the game's state to the next game state
         CurGameState = NextGameState;
 
+        // Wait a small amount of time
         wait_ms(10);
 	}
 }
 
 /* MAZE H */
 //////////////////////////////////////////////////////////////
+
+/*
+This class is used to store the maze tilemap used in the game
+
+The tilemap is simple with only two state; either a tile being a 'FLOOR' or a 'WALL'
+Due to only needing two states for each given tile, the 2D maze can be stored in a 1D array of 32 bit ints, where each bit of the int stores whether the given tile is a 'FLOOR' or 'WALL'
+*/
 class Maze :
 	public BaseGameClass
 {
 private:
-	//bool _maze[WIDTH][HEIGHT]; // 2D array of bools used to store the maze
+
+    // Flag used to store whether the entire map should be redrawn when 'Draw()' is called
+    // NOTE: The MBED simulator LCD is quite slow at redrawing the entire screen so minimising the amount of pixels being set massively improves performance  
     bool _initialDraw;
 
-    int _maze[HEIGHT]; // Used like a 2D array to store the maze. Each bit of the int stores whether the tile is a floor or a wall
-    int _pellets[HEIGHT]; // Used like a 2D array to store if there is a pellet on a given square
+    // Used like a 2D array to store the maze. Each bit of the int stores whether the tile is a floor or a wall
+    // NOTE: Due to x position being stored in a 32 bit int, the width of the maze cannot be greater than 32 tiles
+    int _maze[HEIGHT];
 
+    // Used like a 2D array to store if there is a pellet on a given square
+    // NOTE: Due to x position being stored in a 32 bit int, the width of the maze cannot be greater than 32 tiles
+    int _pellets[HEIGHT]; 
+
+    // Sets the maze tile at (x, y) to be a floor tile 
     void SetFloor(int x, int y);
 
+    // Sets the maze tile at (x, y) to be a wall tile 
     void SetWall(int x, int y);
 
-    void SetTestMaze();
-
+    // Sets the maze to be similar to the classic Pacman maze
+    // NOTE: Map is slightly shrunk to fit on the LCD screen
     void SetClassicMaze();
 
+    // Sets the pellets on the classic maze
     void SetPelletsClassicMaze();
 
+    // Draws the maze tile at (x, y) onto the LCD
     void DrawTile(int x, int y);
 
+    // Get the current number of pellets left in the maze
     int GetPelletCount();
 public:
+    // Stack used to store position to be redrawn
+    // This is used help reduce the number of pixels being drawn to the LCD at a given time
+    // When the Player/Enemy changes its position, it adds its position to this stack
+    // Each position in this stack, as well as some neighbouring tiles are redrawn, preventing the Player/Enemy image from smearing
     std::stack<Position> redrawStack;
 
+    // Stores the maximum amount of pellets in the maze
     int maxPellets;
 
-	Maze(int x, int y);
+    // Constructs a new maze objects
+    // '_initialDraw' is set to true, 'SetClassicMaze()' and 'SetPelletsClassicMaze()' are called to initialise the map
+	Maze();
 
+    // Returns true if the given coordinate (x, y) is within the bounds of the map
     bool IsInBounds(int x, int y);
 
+    // Returns true in the given tile coordinate (x, y) is a floor tile 
 	bool IsFloor(int x, int y);
 
-	bool IsFloorAdjecent(int x, int y, char direction);
+    // Returns true if the tile in the given direction from the given coordinate (x, y) is a tile
+    // (e.g. if 'IsFloorAdjacent(10, 14, EAST)' was called, the tile at (11, 14) would be checked)
+	bool IsFloorAdjacent(int x, int y, char direction);
 
-	bool IsFloorAdjecent(Position position, char direction);
+    // Returns true if the tile in the given direction from the given coordinate (position.x, position.y) is a tile
+	bool IsFloorAdjacent(Position position, char direction);
 
-    bool IsFloorAdjecentScreenPos(int x, int y, char direction);
+    // Checks if the screen position one pixel in the given direction is a floor tile
+    // Does a simple check to make sure that the entire object of size TILE_SIZE * TILE_SIZE could move into the position
+    bool IsFloorAdjacentScreenPos(Position screenPos, char direction);
 
-    bool IsFloorAdjecentScreenPos(Position screenPos, char direction);
-
+    // Returns true if the tile position (x, y) contains a pellet
     bool IsPellet(int x, int y);
 
+    // Removes the pellet at the tile position (x, y)
+    // If there is a pellet at the given position, returns true
+    // If there is no pellet at the given position, returns false
     bool TryRemovePellet(int x, int y);
 
+    // Converts the given screen position into a tile position
+    // Once the tile position is acquired, 'TryRemovePellet' at the tile position is called
     bool TryRemovePelletScreenPos(Position screenPos);
 
+    // Converts the given scree position (x, y) to a position on the tilemap
+    // Tiles are presumed to have dimensions TILE_SIZE * TILE_SIZE
     Position ScreenPosToTilePos(int x, int y);
 
     Position ScreenPosToTilePos(Position screenPos);
@@ -512,32 +567,12 @@ public:
 //////////////////////////////////////////////////////////////
 void Maze::SetFloor(int x, int y)
 {
-	//_maze[x][y] = FLOOR;
 	_maze[y] |= 0x1 << x; // Set the x'th bit
 }
 
 void Maze::SetWall(int x, int y)
 {
-	//_maze[x][y] = WALL;
 	_maze[y] &= ~(0x1 << x); // Clear the x'th bit
-}
-
-void Maze::SetTestMaze()
-{
-	for (int j = 0; j < HEIGHT; j++)
-	{
-		for (int i = 0; i < WIDTH; i++)
-		{
-			if (j % 2 == 1 || i % 4 == 3)
-			{
-				SetFloor(i, j);
-			}
-			else
-			{
-				SetWall(i, j);
-			}
-		}
-	}
 }
 
 void Maze::SetClassicMaze()
@@ -623,7 +658,7 @@ int Maze::GetPelletCount()
     return count;
 }
 
-Maze::Maze(int x, int y) : BaseGameClass(x, y)
+Maze::Maze() : BaseGameClass(0, 0)
 {
     _initialDraw = true;
 	//SetTestMaze();
@@ -643,7 +678,7 @@ bool Maze::IsFloor(int x, int y)
 	return IsInBounds(x, y) && ((_maze[y] >> x) & 0x1);
 }
 
-bool Maze::IsFloorAdjecent(int x, int y, char direction)
+bool Maze::IsFloorAdjacent(int x, int y, char direction)
 {
 	if (direction == NORTH && y > 0)
 	{
@@ -667,17 +702,12 @@ bool Maze::IsFloorAdjecent(int x, int y, char direction)
 	}
 }
 
-bool Maze::IsFloorAdjecent(Position position, char direction)
+bool Maze::IsFloorAdjacent(Position position, char direction)
 {
-	return IsFloorAdjecent(position.x, position.y, direction);
+	return IsFloorAdjacent(position.x, position.y, direction);
 }
 
-bool Maze::IsFloorAdjecentScreenPos(int x, int y, char direction)
-{
-
-}
-
-bool Maze::IsFloorAdjecentScreenPos(Position screenPos, char direction)
+bool Maze::IsFloorAdjacentScreenPos(Position screenPos, char direction)
 {
     Position adjecentPosA;
     Position adjecentPosB;
@@ -1000,14 +1030,14 @@ void Player::Update()
 
         SetDirection();
 
-        if (_maze->IsFloorAdjecentScreenPos(position, _nextDir))
+        if (_maze->IsFloorAdjacentScreenPos(position, _nextDir))
         {
             UpdatePosition(_nextDir);
             _score += _maze->TryRemovePelletScreenPos(position);
             lastDir = _nextDir;
             _nextDir = 0x0;
         }
-        else if (_maze->IsFloorAdjecentScreenPos(position, lastDir))
+        else if (_maze->IsFloorAdjacentScreenPos(position, lastDir))
         {
             UpdatePosition(lastDir);
             _score += _maze->TryRemovePelletScreenPos(position);
@@ -1334,10 +1364,10 @@ void Enemy::SetTarget()
 void Enemy::GetNextDir()
 {
 	// Find all possible tiles the enemy can move into, excluding the tile it has just moved away from
-	bool north = _lastDir != SOUTH && _maze->IsFloorAdjecentScreenPos(position, NORTH);
-	bool east = _lastDir != WEST && _maze->IsFloorAdjecentScreenPos(position, EAST);
-	bool south = _lastDir != NORTH && _maze->IsFloorAdjecentScreenPos(position, SOUTH);
-	bool west = _lastDir != EAST && _maze->IsFloorAdjecentScreenPos(position, WEST);
+	bool north = _lastDir != SOUTH && _maze->IsFloorAdjacentScreenPos(position, NORTH);
+	bool east = _lastDir != WEST && _maze->IsFloorAdjacentScreenPos(position, EAST);
+	bool south = _lastDir != NORTH && _maze->IsFloorAdjacentScreenPos(position, SOUTH);
+	bool west = _lastDir != EAST && _maze->IsFloorAdjacentScreenPos(position, WEST);
 
 	// For each passable tile, get manhattan distance to target
 	int northDist = -1;
@@ -1678,7 +1708,7 @@ int main()
 
 	GameEngine engine;
 	
-	Maze maze(0, 0);
+	Maze maze;
 
 	Player player(&maze, 13, 22);
 
