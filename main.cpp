@@ -181,11 +181,14 @@ public:
 
 /* BASE GAME SPRITE CPP */
 //////////////////////////////////////////////////////////////
+
+// Sets the object's position to "_startPosition"
 void BaseGameSprite::MoveToStartPosition()
 {
     position = _startPosition;
 }
 
+// Moves the object one pixel in the given direction
 void BaseGameSprite::UpdatePosition(char direction)
 {
 	if (direction == NORTH)
@@ -205,131 +208,183 @@ void BaseGameSprite::UpdatePosition(char direction)
 		position.x--;
 	}
 
-    // Teleport logic here
+    // Teleport logic here:
+    // This handles the object appearing on the other side of the map when it reaches the left or right edge
+
+    // If the object is on the left of the screen
     if (position.x == 0)
     {
+        // Set the position to the right side (taking into account the object's size)
         position.x = (WIDTH - 1) * TILE_SIZE;
     }
+    // If the object if on the right of the screen (taking into account the object's size)
     else if (position.x == (WIDTH - 1) * TILE_SIZE)
     {
+        // Set the position to the left side
         position.x = 0;
     }
 }
 
-void BaseGameSprite::DrawSprite(char *spriteImageArray, uint16_t colour)
+// Draws a simple single colour image stored in a 1D char array to the object's current position
+// Array accessed like a 2D array, where each bit of the char stores whether the pixel should be drawn or not 
+void BaseGameSprite::DrawSprite(char spriteImageArray[], uint16_t colour)
 {
-    //BSP_LCD_SetTextColor(colour);
+    // Iterate through each pixel of the 'spriteImageArray'
+    // NOTE: This code presumes the 'spriteImageArray' has dimensions of exactly TILE_SIZE * TILE_SIZE
     for (int i = 0; i < TILE_SIZE; i++)
     {
         for (int j = 0; j < TILE_SIZE; j++)
         {
-            // Get image bit
+            // Check if a pixel should be drawn at this point (if bit is high)
             if (((spriteImageArray[j] >> i) & 0x1))
             {
+                // Draw a pixel on the screen of the given colour 
                 BSP_LCD_DrawPixel(position.x + i, position.y + j, colour);
-            }
-            else 
-            {
-                //BSP_LCD_DrawPixel(position.x + i, position.y + j, LCD_COLOR_BLACK);
             }
         }
     }
 }
 
+// Draws a simple single colour image stored in a 1D char array to the object's current position
+// Array accessed like a 2D array, where each bit of the char stores whether the pixel should be drawn or not
+// The input image will be flipped horizontally on the display
 void BaseGameSprite::DrawSpriteFlippedHorizontal(char spriteImageArray[], uint16_t colour)
 {
+    // Iterate through each pixel of the 'spriteImageArray'
+    // NOTE: This code presumes the 'spriteImageArray' has dimensions of exactly TILE_SIZE * TILE_SIZE
     for (int i = 0; i < TILE_SIZE; i++)
     {
         for (int j = 0; j < TILE_SIZE; j++)
         {
-            // Get image bit
+            // Check if a pixel should be drawn at this point (if bit is high)
             if (((spriteImageArray[j] >> i) & 0x1))
             {
+                // Draw a pixel on the screen of the given colour, flipping the x direction
                 BSP_LCD_DrawPixel(position.x + (TILE_SIZE - 1 - i), position.y + j, colour);
             }
-            else 
-            {
-                //BSP_LCD_DrawPixel(position.x + (TILE_SIZE - 1 - i), position.y + j, LCD_COLOR_BLACK);
-            }
         }
     }
 }
 
+// Draws a simple single colour image stored in a 1D char array to the object's current position
+// Array accessed like a 2D array, where each bit of the char stores whether the pixel should be drawn or not
+// The input image will be rotated anti-clockwise 90 degrees on the display
 void BaseGameSprite::DrawSpriteRotated90(char spriteImageArray[], uint16_t colour)
 {
-    //BSP_LCD_SetTextColor(colour);
+    // Iterate through each pixel of the 'spriteImageArray'
+    // NOTE: This code presumes the 'spriteImageArray' has dimensions of exactly TILE_SIZE * TILE_SIZE
     for (int i = 0; i < TILE_SIZE; i++)
     {
         for (int j = 0; j < TILE_SIZE; j++)
         {
-            // Get image bit
+            // Check if a pixel should be drawn at this point (if bit is high)
+            // Pixel being read is rotated here
             if (((spriteImageArray[i] >> j) & 0x1))
             {
+                // Draw a pixel on the screen of the given colour
                 BSP_LCD_DrawPixel(position.x + i, position.y + j, colour);
-            }
-            else 
-            {
-                //BSP_LCD_DrawPixel(position.x + i, position.y + j, LCD_COLOR_BLACK);
             }
         }
     }
 }
 
+// Draws a simple single colour image stored in a 1D char array to the object's current position
+// Array accessed like a 2D array, where each bit of the char stores whether the pixel should be drawn or not
+// The input image will be rotated anti-clockwise 90 degrees on the display
 void BaseGameSprite::DrawSpriteRotated270(char spriteImageArray[], uint16_t colour)
 {
-    //BSP_LCD_SetTextColor(colour);
+    // Iterate through each pixel of the 'spriteImageArray'
+    // NOTE: This code presumes the 'spriteImageArray' has dimensions of exactly TILE_SIZE * TILE_SIZE
     for (int i = 0; i < TILE_SIZE; i++)
     {
         for (int j = 0; j < TILE_SIZE; j++)
         {
-            // Get image bit
+            // Check if a pixel should be drawn at this point (if bit is high)
+            // Pixel being read is rotated here
             if (((spriteImageArray[i] >> (TILE_SIZE - 1 - j)) & 0x1))
             {
+                // Draw a pixel on the screen of the given colour
                 BSP_LCD_DrawPixel(position.x + i, position.y + j, colour);
-            }
-            else 
-            {
-                //BSP_LCD_DrawPixel(position.x + i, position.y + j, LCD_COLOR_BLACK);
             }
         }
     }
 }
 
+// Constructs the object, setting its position to (x, y) and "Updating" and "Visible" flags to true
+// "_startPosition" will be set to (x, y)
 BaseGameSprite::BaseGameSprite(int x, int y) : BaseGameClass(x, y)
 {
     _startPosition.x = x;
     _startPosition.y = y;
 }
 
+// Checks if this object has collided with the object "sprite"
+// Collision is done using a simple bounding box algorithm, with the box dimensions of TILE_SIZE * TILE_SIZE
 bool BaseGameSprite::HasCollided(BaseGameSprite *sprite)
 {
+    // Bounding box collision detection logic here
     return position.x < sprite->position.x + TILE_SIZE && position.x + TILE_SIZE > sprite->position.x && position.y < sprite->position.y + TILE_SIZE && position.y + TILE_SIZE > sprite->position.y;
 }
 
 /* GAME ENGINE H */
 //////////////////////////////////////////////////////////////
+
+/*
+This class is designed to run the the game
+It has a master array containing all objects in the game as well as the game's main loop
+
+The game loop performs the following:
+    1 - Initialises all game objects        (Calls Init() for all objects in the master array)
+    2 - Updates game objects                (Calls Update() for all objects in the master array)
+    3 - Draws game objects to the screen    (Calls Draw() for all objects in the master array)
+    4 - Return to step 2
+
+*/
 class GameEngine
 {
 private:
+
+    // This is the master array which stores all of the game's objects
+    // NOTE: Make sure that the defined 'MAX_GAME_OBJECTS' has a value greater or equal to the number of objects in the game or bad things will happen!
+    // NOTE: Something fancier like a linked list could be used here, but this works and is fast to operate on
 	BaseGameClass* _GameObjects[MAX_GAME_OBJECTS];
+
+    // Stores the number of objects in the game
 	int _GameObjectCount;
 
+    // Calls the 'Init()' function of all objects stored in '_GameObjects'
 	void Init();
 
+    // Calls the 'Update()' function of all objects stored in '_GameObjects'
+    // Objects with the 'Updating' flag set to false will be skipped
 	void Update();
 
+    // Calls the 'Draw()' function of all objects stored in '_GameObjects'
+    // Objects with the 'Visible' flag set to false will be skipped
 	void Draw();
 
 public:
+
+    // Constructs a new 'GameEngine' object
+    // '_GameObjectCount' is set to 0 
 	GameEngine();
 
+    // Adds the given game object to the master array
 	void AddGameObject(BaseGameClass* gameObject);
 
+    // Main game loop function
+    // The game loop performs the following:
+    //     1 - Initialises all game objects        (Calls Init() for all objects in the master array)
+    //     2 - Updates game objects                (Calls Update() for all objects in the master array)
+    //     3 - Draws game objects to the screen    (Calls Draw() for all objects in the master array)
+    //     4 - Return to step 2
 	void MainGameLoop();
 };
 
 /* GAME ENGINE CPP */
 //////////////////////////////////////////////////////////////
+
+// Calls the 'Init()' function of all objects stored in '_GameObjects'
 void GameEngine::Init()
 {
 	for (int i = 0; i < _GameObjectCount; i++)
@@ -338,6 +393,8 @@ void GameEngine::Init()
 	}
 }
 
+// Calls the 'Update()' function of all objects stored in '_GameObjects'
+// Objects with the 'Updating' flag set to false will be skipped
 void GameEngine::Update()
 {
 	for (int i = 0; i < _GameObjectCount; i++)
@@ -349,6 +406,8 @@ void GameEngine::Update()
 	}
 }
 
+// Calls the 'Draw()' function of all objects stored in '_GameObjects'
+// Objects with the 'Visible' flag set to false will be skipped
 void GameEngine::Draw()
 {
 	for (int i = 0; i < _GameObjectCount; i++)
@@ -360,6 +419,8 @@ void GameEngine::Draw()
 	}
 }
 
+// Constructs a new 'GameEngine' object
+// '_GameObjectCount' is set to 0 
 GameEngine::GameEngine()
 {
     _GameObjectCount = 0;
