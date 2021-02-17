@@ -485,10 +485,12 @@ private:
 
     // Used like a 2D array to store the maze. Each bit of the int stores whether the tile is a floor or a wall
     // NOTE: Due to x position being stored in a 32 bit int, the width of the maze cannot be greater than 32 tiles
+    // NOTE: To reduce ram usage, this could be stored as a const, however, leaving it like this allows for the possibility of different mazes being used
     int _maze[HEIGHT];
 
     // Used like a 2D array to store if there is a pellet on a given square
     // NOTE: Due to x position being stored in a 32 bit int, the width of the maze cannot be greater than 32 tiles
+    // NOTE: To reduce ram usage, this could be stored as a const, however, leaving it like this allows for the possibility of different mazes being used
     int _pellets[HEIGHT]; 
 
     // Sets the maze tile at (x, y) to be a floor tile 
@@ -526,7 +528,8 @@ public:
     // Returns true if the given coordinate (x, y) is within the bounds of the map
     bool IsInBounds(int x, int y);
 
-    // Returns true in the given tile coordinate (x, y) is a floor tile 
+    // Returns true in the given tile coordinate (x, y) is a floor tile
+    // If (x, y) is out of bounds, this returns false
 	bool IsFloor(int x, int y);
 
     // Returns true if the tile in the given direction from the given coordinate (x, y) is a tile
@@ -552,29 +555,46 @@ public:
     // Once the tile position is acquired, 'TryRemovePellet' at the tile position is called
     bool TryRemovePelletScreenPos(Position screenPos);
 
-    // Converts the given scree position (x, y) to a position on the tilemap
+    // Converts the given screen position (x, y) to a position on the tilemap
     // Tiles are presumed to have dimensions TILE_SIZE * TILE_SIZE
     Position ScreenPosToTilePos(int x, int y);
 
+    // Converts the given screen position (screenPos) to a position on the tilemap
+    // Tiles are presumed to have dimensions TILE_SIZE * TILE_SIZE
     Position ScreenPosToTilePos(Position screenPos);
 
+    // Update function
+    // State:
+    //      STARTUP: Make the maze visible + set '_initialDraw' to true + add the pellets to the maze
+    //      CONTINUE: Set '_initalDraw' to true
+    //      NEXT_LEVEL: Same as 'STARTUP' state
+    //      PLAY: Do nothing
+    //      DEAD: Do nothing
+    //      default: Set the maze to be invisible
     void Update();
 
+    // Draw function
+    // When '_initialDraw' is true, all tiles within the maze are draw
+    // When 'initialDraw' is false, only positions in 'redrawStack' are drawn
 	void Draw();
 };
 
 /* MAZE CPP */
 //////////////////////////////////////////////////////////////
+// Sets the maze tile at (x, y) to be a floor tile 
 void Maze::SetFloor(int x, int y)
 {
 	_maze[y] |= 0x1 << x; // Set the x'th bit
 }
 
+// Sets the maze tile at (x, y) to be a wall tile 
 void Maze::SetWall(int x, int y)
 {
 	_maze[y] &= ~(0x1 << x); // Clear the x'th bit
 }
 
+// Sets the maze to be similar to the classic Pacman maze
+// NOTE: Map is slightly shrunk to fit on the LCD screen
 void Maze::SetClassicMaze()
 {
     _maze[0] = 0x0;
@@ -609,6 +629,7 @@ void Maze::SetClassicMaze()
     _maze[29] = 0x0;
 }
 
+// Sets the pellets on the classic maze
 void Maze::SetPelletsClassicMaze()
 {
     _pellets[0] = 0x0;
@@ -643,14 +664,17 @@ void Maze::SetPelletsClassicMaze()
     _pellets[29] = 0x0;
 }
 
+// Get the current number of pellets left in the maze
 int Maze::GetPelletCount()
 {
     int count = 0;
 
+    // Iterate through the map
     for (int i = 0; i < WIDTH; i++)
     {
         for (int j = 0; j < HEIGHT; j++)
         {
+            // If there is a pellet at the given position, increment count
             count += IsPellet(i, j);
         }
     }
@@ -658,26 +682,31 @@ int Maze::GetPelletCount()
     return count;
 }
 
+// Constructs a new maze objects
+// '_initialDraw' is set to true, 'SetClassicMaze()' and 'SetPelletsClassicMaze()' are called to initialise the map
 Maze::Maze() : BaseGameClass(0, 0)
 {
     _initialDraw = true;
-	//SetTestMaze();
 	SetClassicMaze();
     SetPelletsClassicMaze();
     maxPellets = GetPelletCount();
 }
 
+// Returns true if the given coordinate (x, y) is within the bounds of the map
 bool Maze::IsInBounds(int x, int y)
 {
     return x > -1 && x < WIDTH && y > -1 && y < HEIGHT;
 }
 
+// Returns true in the given tile coordinate (x, y) is a floor tile
+// If (x, y) is out of bounds, this returns false
 bool Maze::IsFloor(int x, int y)
 {
-	//return _maze[x][y];
 	return IsInBounds(x, y) && ((_maze[y] >> x) & 0x1);
 }
 
+// Returns true if the tile in the given direction from the given coordinate (x, y) is a tile
+// (e.g. if 'IsFloorAdjacent(10, 14, EAST)' was called, the tile at (11, 14) would be checked)
 bool Maze::IsFloorAdjacent(int x, int y, char direction)
 {
 	if (direction == NORTH && y > 0)
@@ -702,51 +731,88 @@ bool Maze::IsFloorAdjacent(int x, int y, char direction)
 	}
 }
 
+// Returns true if the tile in the given direction from the given coordinate (position.x, position.y) is a tile
 bool Maze::IsFloorAdjacent(Position position, char direction)
 {
 	return IsFloorAdjacent(position.x, position.y, direction);
 }
 
+// Checks if the screen position one pixel in the given direction is a floor tile
+// Does a simple check to make sure that the entire object of size TILE_SIZE * TILE_SIZE could move into the position
 bool Maze::IsFloorAdjacentScreenPos(Position screenPos, char direction)
 {
-    Position adjecentPosA;
-    Position adjecentPosB;
+    /*
+        Example with 2x2 pixel tiles:
+        Legend:
+            # - Wall at pixel
+            . - Floor at pixel
+            * - Pixel being checked
+            ~ - Object's pixel not being checked
+
+        Image A:
+            ##..####
+            ##..####
+            ##.~~...
+            ##.~~...
+            ##..####
+            ##..####
+
+        Image B:
+            ##..####
+            ##.**###
+            ##.~~...
+            ##.~~...
+            ##..####
+            ##..####
+
+        Image A shows the initial world state
+        Image B shows the pixels being checked when the object is trying to move north
+
+        If only a single pixel on the top left above the object was being checked, the object would be able to move partly into the wall above.
+        Checking both pixels above each edge of the object reveals that there is actually a wall in the way 
+    */
+    
+    // Create two empty Position structs
+    // These are used to check the edge of the object moving in the given direction
+    Position adjacentPosA;
+    Position adjacentPosB;
 
     if (direction == NORTH)
     {
-        adjecentPosA.x = screenPos.x;
-        adjecentPosA.y = screenPos.y - 1;
+        // Set the positions to be checked 
+        adjacentPosA.x = screenPos.x;
+        adjacentPosA.y = screenPos.y - 1;
 
-        adjecentPosB.x = screenPos.x + TILE_SIZE - 1;
-        adjecentPosB.y = screenPos.y - 1;
+        adjacentPosB.x = screenPos.x + TILE_SIZE - 1;
+        adjacentPosB.y = screenPos.y - 1;
     }
     else if (direction == EAST)
     {
-        adjecentPosA.x = screenPos.x + TILE_SIZE;
-        adjecentPosA.y = screenPos.y;
+        adjacentPosA.x = screenPos.x + TILE_SIZE;
+        adjacentPosA.y = screenPos.y;
 
-        adjecentPosB.x = screenPos.x + TILE_SIZE;
-        adjecentPosB.y = screenPos.y + TILE_SIZE - 1;
+        adjacentPosB.x = screenPos.x + TILE_SIZE;
+        adjacentPosB.y = screenPos.y + TILE_SIZE - 1;
     }
     else if (direction == SOUTH)
     {
-        adjecentPosA.x = screenPos.x;
-        adjecentPosA.y = screenPos.y + TILE_SIZE;
+        adjacentPosA.x = screenPos.x;
+        adjacentPosA.y = screenPos.y + TILE_SIZE;
 
-        adjecentPosB.x = screenPos.x + TILE_SIZE - 1;
-        adjecentPosB.y = screenPos.y + TILE_SIZE;
+        adjacentPosB.x = screenPos.x + TILE_SIZE - 1;
+        adjacentPosB.y = screenPos.y + TILE_SIZE;
     }
     else if (direction == WEST)
     {
-        adjecentPosA.x = screenPos.x - 1;
-        adjecentPosA.y = screenPos.y;
+        adjacentPosA.x = screenPos.x - 1;
+        adjacentPosA.y = screenPos.y;
 
-        adjecentPosB.x = screenPos.x - 1;
-        adjecentPosB.y = screenPos.y + TILE_SIZE - 1;
+        adjacentPosB.x = screenPos.x - 1;
+        adjacentPosB.y = screenPos.y + TILE_SIZE - 1;
     }
 
-    Position tilePosA = ScreenPosToTilePos(adjecentPosA);
-    Position tilePosB = ScreenPosToTilePos(adjecentPosB);
+    Position tilePosA = ScreenPosToTilePos(adjacentPosA);
+    Position tilePosB = ScreenPosToTilePos(adjacentPosB);
 
     return IsFloor(tilePosA.x, tilePosA.y) && IsFloor(tilePosB.x, tilePosB.y);
 }
