@@ -779,7 +779,7 @@ bool Maze::IsFloorAdjacentScreenPos(Position screenPos, char direction)
 
     if (direction == NORTH)
     {
-        // Set the positions to be checked 
+        // Set the positions to be checked
         adjacentPosA.x = screenPos.x;
         adjacentPosA.y = screenPos.y - 1;
 
@@ -788,6 +788,7 @@ bool Maze::IsFloorAdjacentScreenPos(Position screenPos, char direction)
     }
     else if (direction == EAST)
     {
+        // Set the positions to be checked
         adjacentPosA.x = screenPos.x + TILE_SIZE;
         adjacentPosA.y = screenPos.y;
 
@@ -796,6 +797,7 @@ bool Maze::IsFloorAdjacentScreenPos(Position screenPos, char direction)
     }
     else if (direction == SOUTH)
     {
+        // Set the positions to be checked
         adjacentPosA.x = screenPos.x;
         adjacentPosA.y = screenPos.y + TILE_SIZE;
 
@@ -804,6 +806,7 @@ bool Maze::IsFloorAdjacentScreenPos(Position screenPos, char direction)
     }
     else if (direction == WEST)
     {
+        // Set the positions to be checked
         adjacentPosA.x = screenPos.x - 1;
         adjacentPosA.y = screenPos.y;
 
@@ -811,95 +814,131 @@ bool Maze::IsFloorAdjacentScreenPos(Position screenPos, char direction)
         adjacentPosB.y = screenPos.y + TILE_SIZE - 1;
     }
 
+    // Convert the screen positions to tile positions in the maze
     Position tilePosA = ScreenPosToTilePos(adjacentPosA);
     Position tilePosB = ScreenPosToTilePos(adjacentPosB);
 
+    // Check if both tile positions are floor tiles
     return IsFloor(tilePosA.x, tilePosA.y) && IsFloor(tilePosB.x, tilePosB.y);
 }
 
+// Returns true if the tile position (x, y) contains a pellet
 bool Maze::IsPellet(int x, int y)
 {
-	//return _maze[x][y];
 	return IsInBounds(x, y) && ((_pellets[y] >> x) & 0x1);
 }
 
+// Removes the pellet at the tile position (x, y)
+// If there is a pellet at the given position, returns true
+// If there is no pellet at the given position, returns false
 bool Maze::TryRemovePellet(int x, int y) {
+    // Check if there is a pellet at the given position (x, y)
     bool hasPellet = IsPellet(x, y);
 
+    // If there is a pellet
     if (hasPellet)
     {
+        // Remove the pellet
         _pellets[y] &= ~(0x1 << x); // Clear the x'th bit
     }
     
+    // Returns true if a pellet was removed
     return hasPellet;
 }
 
+// Converts the given screen position into a tile position
+// Once the tile position is acquired, 'TryRemovePellet' at the tile position is called
 bool Maze::TryRemovePelletScreenPos(Position screenPos) {
-  Position tilePos = ScreenPosToTilePos(screenPos);
-  return TryRemovePellet(tilePos.x, tilePos.y);
+    // Convert the screen position to a tile position
+    Position tilePos = ScreenPosToTilePos(screenPos);
+
+    // Try and remove a pellet at the tile position
+    return TryRemovePellet(tilePos.x, tilePos.y);
 }
 
+// Converts the given screen position (x, y) to a position on the tilemap
+// Tiles are presumed to have dimensions TILE_SIZE * TILE_SIZE
 Position Maze::ScreenPosToTilePos(int x, int y)
 {
+    // Divide the screen position by 'TILE_SIZE'
 	int tileX = x / TILE_SIZE;
 	int tileY = y / TILE_SIZE;
     
+    // Create a new 'Position' struct to store the new tile position to
     Position tilePos;
+
+    // Set the 'x' and 'y' of the new 'Position' struct to the tile positions
     tilePos.x = tileX;
     tilePos.y = tileY;
     
+    // Return the new created 'Position' struct
     return tilePos;
-	//return { tileX, tileY };
 }
 
+// Converts the given screen position (screenPos) to a position on the tilemap
+// Tiles are presumed to have dimensions TILE_SIZE * TILE_SIZE
 Position Maze::ScreenPosToTilePos(Position screenPos)
 {
 	return ScreenPosToTilePos(screenPos.x, screenPos.y);
 }
 
+// Update function
+// State:
+//      STARTUP: Make the maze visible + set '_initialDraw' to true + add the pellets to the maze
+//      CONTINUE: Set '_initalDraw' to true
+//      NEXT_LEVEL: Same as 'STARTUP' state
+//      PLAY: Do nothing
+//      DEAD: Do nothing
+//      default: Set the maze to be invisible
 void Maze::Update()
 {
+    // Game State Switch
     switch (CurGameState) {
+    // 
     case STARTUP:
-        _initialDraw = true;
-        Visible = true;
-        SetPelletsClassicMaze();
+        _initialDraw = true; // Set the intial draw flag
+        Visible = true; // Make the maze visible
+        SetPelletsClassicMaze(); // Fill the maze with pellets
         break;
     case CONTINUE:
-        _initialDraw = true;
+        _initialDraw = true; // Set the intial draw flag
         break;
     case NEXT_LEVEL:
-        _initialDraw = true;
-        Visible = true;
-        SetPelletsClassicMaze();
+        _initialDraw = true; // Set the intial draw flag
+        Visible = true; // Make the maze visible
+        SetPelletsClassicMaze(); // Fill the maze with pellets
         break;
     case PLAY:
         break;
     case DEAD:
         break;
     default:
-        Visible = false;
+        Visible = false; // Make the maze invisible
         break;
     }
 }
 
+// Draws the maze tile at (x, y) onto the LCD
 void Maze::DrawTile(int x, int y)
 {
+    // If the position is a floor tile or out of bounds
     if (IsFloor(x, y) || !IsInBounds(x, y)) 
     {
-        // BSP_LCD_DrawPixel(i, j, LCD_COLOR_BLACK);
+        // Draw a black tile
         BSP_LCD_SetTextColor(LCD_COLOR_BLACK);
         BSP_LCD_FillRect(x * TILE_SIZE, y * TILE_SIZE, TILE_SIZE, TILE_SIZE - 1);
 
+        // If the position is in bounds and contains a pellet
         if (IsInBounds(x, y) && IsPellet(x, y))
         {
+            // Draw a small yellow circle at the centre of the tile
             BSP_LCD_SetTextColor(LCD_COLOR_YELLOW);
             BSP_LCD_FillCircle((x * TILE_SIZE) + (TILE_SIZE / 2), (y * TILE_SIZE) + (TILE_SIZE / 2), 1);
         }
     } 
     else 
     {
-        // BSP_LCD_DrawPixel(i, j, LCD_COLOR_BLUE);
+        // Draw a blue tile
         BSP_LCD_SetTextColor(LCD_COLOR_BLUE);
         BSP_LCD_FillRect(x * TILE_SIZE, y * TILE_SIZE, TILE_SIZE, TILE_SIZE - 1);
     }
