@@ -944,13 +944,18 @@ void Maze::DrawTile(int x, int y)
     }
 }
 
+// Draw function
+// When '_initialDraw' is true, all tiles within the maze are draw
+// When 'initialDraw' is false, only positions in 'redrawStack' are drawn
 void Maze::Draw()
 {
+    // If the '_initialDraw' flag is high
     if (_initialDraw)
     {
+        // Unset the flag
         _initialDraw = false;
 
-        // Print the maze to the console
+        // Redraw every tile in the maze
         for (int j = 0; j < HEIGHT; j++) {
             for (int i = 0; i < WIDTH; i++) {
                 DrawTile(i, j);
@@ -959,19 +964,21 @@ void Maze::Draw()
     }
     else 
     {
+        // While there are still tiles to be redrawn in the stack
         while(!redrawStack.empty())
         {
+            // Get the position to be redrawn from the top of the stack
             Position redrawPos = redrawStack.top();
 
+            // Convert the screen position to a tile position
             Position tilePos = ScreenPosToTilePos(redrawPos);
 
-            // Redraw the surrounding tiles
+            // Redraw the tile and some surrounding tiles
             DrawTile(tilePos.x, tilePos.y);
             DrawTile(tilePos.x, tilePos.y + 1);
             DrawTile(tilePos.x + 1, tilePos.y);
 
-            // BSP_LCD_SetTextColor(LCD_COLOR_BLACK);
-            // BSP_LCD_FillRect(redrawPos.x, redrawPos.y, TILE_SIZE, TILE_SIZE);
+            // Remove the position from the top of the stack
             redrawStack.pop();
         }
     }
